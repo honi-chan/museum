@@ -29,15 +29,40 @@ type createExhibitionResponse struct {
 func main() {
 	mux := http.NewServeMux()
 
-	// 動作確認用。
-	mux.HandleFunc("GET /health", health)
+	// Exhibitionの保存先。
+	//
+	// 現段階ではメモリ保存。
+	// 後でPostgreSQL Repositoryへ差し替える。
+	repository := exhibition.NewMemoryRepository()
 
-	// 最初のMUSEUM機能。
-	mux.HandleFunc("POST /exhibitions", createExhibition)
+	idGenerator := exhibition.UUIDGenerator{}
+
+	mux.HandleFunc(
+		"GET /health",
+		health,
+	)
+
+	mux.HandleFunc(
+		"POST /exhibitions",
+		func(
+			w http.ResponseWriter,
+			r *http.Request,
+		) {
+			createExhibition(
+				w,
+				r,
+				idGenerator,
+				repository,
+			)
+		},
+	)
 
 	log.Println("server started on :8080")
 
-	if err := http.ListenAndServe(":8080", mux); err != nil {
+	if err := http.ListenAndServe(
+		":8080",
+		mux,
+	); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -50,51 +75,51 @@ func health(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"status":"ok"}`))
 }
 
-func createExhibition(w http.ResponseWriter, r *http.Request) {
+func createExhibition(
+	w http.ResponseWriter,
+	r *http.Request,
+	idGenerator exhibition.IDGenerator,
+	repository exhibition.Repository,
+) {
 	var request createExhibitionRequest
 
-	// JSON
-	//
-	// {
-	//   "museum_id": "...",
-	//   "title": "...",
-	//   "description": "..."
-	// }
-	//
-	// をGoのstructへ変換する。
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+	if err := json.NewDecoder(
+		r.Body,
+	).Decode(&request); err != nil {
 		http.Error(
 			w,
 			`{"error":"invalid request body"}`,
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
-	// HTTP用モデルから、
-	// MUSEUMのCreateInputへ変換する。
 	input := exhibition.CreateInput{
 		MuseumID:    request.MuseumID,
 		Title:       request.Title,
 		Description: request.Description,
 	}
 
-	// HTTP側では、本番用のUUIDGeneratorを使用する。
+	// HTTP Handler自身では、
+	// Exhibitionの作成方法や保存方法を知らない。
 	//
-	// createExhibition自体はUUID生成処理を実装しない。
-	// Exhibition側で定義された境界を通して利用する。
-	idGenerator := exhibition.UUIDGenerator{}
-
-	created, err := exhibition.Create(
+	// 必要な依存関係を渡して、
+	// CreateAndSave()へ処理を委譲する。
+	created, err := exhibition.CreateAndSave(
+		r.Context(),
 		input,
 		idGenerator,
+		repository,
 	)
+
 	if err != nil {
 		http.Error(
 			w,
 			`{"error":"`+err.Error()+`"}`,
 			http.StatusBadRequest,
 		)
+
 		return
 	}
 
@@ -105,10 +130,21 @@ func createExhibition(w http.ResponseWriter, r *http.Request) {
 		Description: created.Description,
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.Header().Set(
+		"Content-Type",
+		"application/json",
+	)
 
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("failed to encode response: %v", err)
+	w.WriteHeader(
+		http.StatusCreated,
+	)
+
+	if err := json.NewEncoder(
+		w,
+	).Encode(response); err != nil {
+		log.Printf(
+			"failed to encode response: %v",
+			err,
+		)
 	}
 }
