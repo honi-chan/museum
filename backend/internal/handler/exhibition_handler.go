@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 
+	"museum/internal/handler/httpx"
 	"museum/internal/usecase"
 )
 
@@ -12,6 +13,18 @@ import (
 // Exhibitionに関するHTTP通信を担当する。
 //
 // ビジネスルールはここには書かない。
+//
+// Handlerの責務は、
+//
+// HTTP Request
+// ↓
+// UseCase Input
+// ↓
+// UseCase実行
+// ↓
+// HTTP Response
+//
+// への変換だけにする。
 type ExhibitionHandler struct {
 	createUseCase *usecase.CreateExhibitionUseCase
 }
@@ -26,9 +39,9 @@ func NewExhibitionHandler(
 }
 
 // createExhibitionRequest は
-// HTTP Request専用モデル。
+// HTTP Request専用のデータ構造。
 //
-// DomainやUseCaseとは分離する。
+// DomainモデルをそのままHTTPに公開しない。
 type createExhibitionRequest struct {
 	MuseumID    string `json:"museum_id"`
 	Title       string `json:"title"`
@@ -36,7 +49,10 @@ type createExhibitionRequest struct {
 }
 
 // createExhibitionResponse は
-// HTTP Response専用モデル。
+// HTTP Response専用のデータ構造。
+//
+// APIとして何を公開するかは
+// Handler側で明示的に決める。
 type createExhibitionResponse struct {
 	ID          string `json:"id"`
 	MuseumID    string `json:"museum_id"`
@@ -51,43 +67,61 @@ func (h *ExhibitionHandler) Create(
 ) {
 	var request createExhibitionRequest
 
-	// JSON Requestを読み込む。
-	if err := json.NewDecoder(
-		r.Body,
-	).Decode(&request); err != nil {
-		http.Error(
+	// -----------------------------
+	// Request Decode
+	// -----------------------------
+
+	// HTTP Request BodyをJSONから構造体へ変換する。
+	//
+	// JSON処理そのものはhttpxへ委譲する。
+	if err := httpx.DecodeJSON(
+		r,
+		&request,
+	); err != nil {
+		writeError(
 			w,
-			`{"error":"invalid request body"}`,
 			http.StatusBadRequest,
+			errors.New("invalid request body"),
 		)
 
 		return
 	}
 
-	// HTTP RequestをUseCase用Inputへ変換する。
+	// -----------------------------
+	// HTTP → UseCase
+	// -----------------------------
+
+	// HTTP専用Requestから
+	// UseCase専用Inputへ変換する。
 	input := usecase.CreateExhibitionInput{
 		MuseumID:    request.MuseumID,
 		Title:       request.Title,
 		Description: request.Description,
 	}
 
-	// ビジネス処理はUseCaseへ任せる。
+	// -----------------------------
+	// UseCase
+	// -----------------------------
+
 	created, err := h.createUseCase.Execute(
 		r.Context(),
 		input,
 	)
 
 	if err != nil {
-		http.Error(
+		writeError(
 			w,
-			`{"error":"`+err.Error()+`"}`,
 			http.StatusBadRequest,
+			err,
 		)
 
 		return
 	}
 
-	// DomainをHTTP Responseへ変換する。
+	// -----------------------------
+	// Domain → HTTP
+	// -----------------------------
+
 	response := createExhibitionResponse{
 		ID:          created.ID,
 		MuseumID:    created.MuseumID,
@@ -95,21 +129,40 @@ func (h *ExhibitionHandler) Create(
 		Description: created.Description,
 	}
 
-	w.Header().Set(
-		"Content-Type",
-		"application/json",
-	)
+	// -----------------------------
+	// Response
+	// -----------------------------
 
-	w.WriteHeader(
-		http.StatusCreated,
-	)
-
-	if err := json.NewEncoder(
+	if err := httpx.WriteJSON(
 		w,
-	).Encode(response); err != nil {
+		http.StatusCreated,
+		response,
+	); err != nil {
 		log.Printf(
-			"failed to encode response: %v",
+			"failed to write response: %v",
 			err,
+		)
+	}
+}
+
+// writeError はHandler内部で使う
+// エラー出力の補助関数。
+//
+// JSON書き込み自体が失敗した場合だけ
+// Server側のログとして記録する。
+func writeError(
+	w http.ResponseWriter,
+	status int,
+	err error,
+) {
+	if writeErr := httpx.WriteError(
+		w,
+		status,
+		err,
+	); writeErr != nil {
+		log.Printf(
+			"failed to write error response: %v",
+			writeErr,
 		)
 	}
 }
