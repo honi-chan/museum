@@ -29,13 +29,16 @@ type createExhibitionResponse struct {
 func main() {
 	mux := http.NewServeMux()
 
-	// Exhibitionの保存先。
-	//
-	// 現段階ではメモリ保存。
-	// 後でPostgreSQL Repositoryへ差し替える。
+	// Infrastructureを生成する。
 	repository := exhibition.NewMemoryRepository()
-
 	idGenerator := exhibition.UUIDGenerator{}
+
+	// Exhibitionに必要な依存関係を
+	// Serviceへまとめて渡す。
+	exhibitionService := exhibition.NewService(
+		repository,
+		idGenerator,
+	)
 
 	mux.HandleFunc(
 		"GET /health",
@@ -51,8 +54,7 @@ func main() {
 			createExhibition(
 				w,
 				r,
-				idGenerator,
-				repository,
+				exhibitionService,
 			)
 		},
 	)
@@ -78,8 +80,7 @@ func health(w http.ResponseWriter, r *http.Request) {
 func createExhibition(
 	w http.ResponseWriter,
 	r *http.Request,
-	idGenerator exhibition.IDGenerator,
-	repository exhibition.Repository,
+	service *exhibition.Service,
 ) {
 	var request createExhibitionRequest
 
@@ -101,16 +102,13 @@ func createExhibition(
 		Description: request.Description,
 	}
 
-	// HTTP Handler自身では、
-	// Exhibitionの作成方法や保存方法を知らない。
+	// HandlerはServiceだけ呼ぶ。
 	//
-	// 必要な依存関係を渡して、
-	// CreateAndSave()へ処理を委譲する。
-	created, err := exhibition.CreateAndSave(
+	// RepositoryやIDGeneratorなど、
+	// 内部実装を知らなくてよい。
+	created, err := service.Create(
 		r.Context(),
 		input,
-		idGenerator,
-		repository,
 	)
 
 	if err != nil {
