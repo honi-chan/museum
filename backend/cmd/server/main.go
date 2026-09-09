@@ -79,7 +79,16 @@ func createExhibition(w http.ResponseWriter, r *http.Request) {
 		Description: request.Description,
 	}
 
-	created, err := exhibition.Create(input)
+	// HTTP側では、本番用のUUIDGeneratorを使用する。
+	//
+	// createExhibition自体はUUID生成処理を実装しない。
+	// Exhibition側で定義された境界を通して利用する。
+	idGenerator := exhibition.UUIDGenerator{}
+
+	created, err := exhibition.Create(
+		input,
+		idGenerator,
+	)
 	if err != nil {
 		http.Error(
 			w,

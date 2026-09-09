@@ -8,8 +8,9 @@ import (
 
 // CreateInput は、展示室を作成するために必要な情報。
 //
-// HTTPのRequestではない。
-// CLIやモバイルアプリなど、どこから呼ばれても使える入力モデル。
+// HTTP Requestではない。
+// Web / CLI / Mobileなど、
+// 呼び出し元に依存しない入力モデル。
 type CreateInput struct {
 	MuseumID    string
 	Title       string
@@ -18,21 +19,28 @@ type CreateInput struct {
 
 // Create は新しい展示室を生成する。
 //
-// この関数には「展示室を作る」という
-// MUSEUM固有のルールを書く。
-func Create(input CreateInput) (Exhibition, error) {
-	// 展示室には必ずタイトルが必要。
+// Exhibitionを作るためのルールだけを担当する。
+//
+// IDを「どう生成するか」はCreateの責務ではないため、
+// IDGeneratorとして外から受け取る。
+func Create(
+	input CreateInput,
+	idGenerator IDGenerator,
+) (Exhibition, error) {
+	// タイトル前後の余計な空白を除去する。
 	title := strings.TrimSpace(input.Title)
 
+	// MUSEUMのルール:
+	// タイトルのない展示室は作成できない。
 	if title == "" {
 		return Exhibition{}, errors.New("exhibition title is required")
 	}
 
-	// 現時点ではID生成方法は仮。
+	// ID生成方法そのものは知らない。
 	//
-	// 後からUUID生成処理などが必要になったとき、
-	// この部分の責務を分離する。
-	id := "temporary-id"
+	// Createが知っているのは、
+	// Generate()を呼べばIDが取得できることだけ。
+	id := idGenerator.Generate()
 
 	return Exhibition{
 		ID:          id,

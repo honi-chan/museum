@@ -2,7 +2,20 @@ package exhibition
 
 import "testing"
 
-// 展示室を正常に作成できることを確認する。
+// fixedIDGenerator はテスト専用のIDGenerator。
+//
+// Generate()を呼ぶと必ず同じIDを返す。
+//
+// 本物のUUIDなどを使わないことで、
+// テスト結果を毎回同じにできる。
+type fixedIDGenerator struct {
+	id string
+}
+
+func (g fixedIDGenerator) Generate() string {
+	return g.id
+}
+
 func TestCreate(t *testing.T) {
 	input := CreateInput{
 		MuseumID:    "museum-001",
@@ -10,14 +23,30 @@ func TestCreate(t *testing.T) {
 		Description: "Things I created.",
 	}
 
-	created, err := Create(input)
+	// テストではID生成結果を固定する。
+	idGenerator := fixedIDGenerator{
+		id: "exhibition-001",
+	}
 
-	// エラーが返ってきたらテスト失敗。
+	created, err := Create(
+		input,
+		idGenerator,
+	)
+
 	if err != nil {
 		t.Fatalf("Create() returned error: %v", err)
 	}
 
-	// MuseumIDが入力値と一致すること。
+	// IDGeneratorが返したIDが、
+	// Exhibitionに設定されること。
+	if created.ID != "exhibition-001" {
+		t.Errorf(
+			"ID = %q, want %q",
+			created.ID,
+			"exhibition-001",
+		)
+	}
+
 	if created.MuseumID != input.MuseumID {
 		t.Errorf(
 			"MuseumID = %q, want %q",
@@ -26,7 +55,6 @@ func TestCreate(t *testing.T) {
 		)
 	}
 
-	// Titleが入力値と一致すること。
 	if created.Title != input.Title {
 		t.Errorf(
 			"Title = %q, want %q",
@@ -35,7 +63,6 @@ func TestCreate(t *testing.T) {
 		)
 	}
 
-	// Descriptionが入力値と一致すること。
 	if created.Description != input.Description {
 		t.Errorf(
 			"Description = %q, want %q",
@@ -44,32 +71,30 @@ func TestCreate(t *testing.T) {
 		)
 	}
 
-	// 作成された展示室にはIDが存在すること。
-	if created.ID == "" {
-		t.Error("ID should not be empty")
-	}
-
-	// 作成日時が設定されていること。
 	if created.CreatedAt.IsZero() {
 		t.Error("CreatedAt should not be zero")
 	}
 }
 
-// タイトル前後の空白が除去されることを確認する。
 func TestCreate_TrimsTitle(t *testing.T) {
 	input := CreateInput{
 		MuseumID: "museum-001",
 		Title:    "  THINGS I MADE  ",
 	}
 
-	created, err := Create(input)
+	idGenerator := fixedIDGenerator{
+		id: "exhibition-001",
+	}
+
+	created, err := Create(
+		input,
+		idGenerator,
+	)
 
 	if err != nil {
 		t.Fatalf("Create() returned error: %v", err)
 	}
 
-	// UIやAPIから余計な空白が渡されても、
-	// Exhibition内部では正規化された状態にする。
 	if created.Title != "THINGS I MADE" {
 		t.Errorf(
 			"Title = %q, want %q",
@@ -79,30 +104,40 @@ func TestCreate_TrimsTitle(t *testing.T) {
 	}
 }
 
-// タイトルが空の場合は展示室を作れないことを確認する。
 func TestCreate_RequiresTitle(t *testing.T) {
 	input := CreateInput{
 		MuseumID: "museum-001",
 		Title:    "",
 	}
 
-	_, err := Create(input)
+	idGenerator := fixedIDGenerator{
+		id: "exhibition-001",
+	}
 
-	// MUSEUMのルールとして、
-	// タイトルのない展示室は存在できない。
+	_, err := Create(
+		input,
+		idGenerator,
+	)
+
 	if err == nil {
 		t.Fatal("Create() expected error, got nil")
 	}
 }
 
-// 空白だけのタイトルも無効であることを確認する。
 func TestCreate_RejectsWhitespaceOnlyTitle(t *testing.T) {
 	input := CreateInput{
 		MuseumID: "museum-001",
 		Title:    "    ",
 	}
 
-	_, err := Create(input)
+	idGenerator := fixedIDGenerator{
+		id: "exhibition-001",
+	}
+
+	_, err := Create(
+		input,
+		idGenerator,
+	)
 
 	if err == nil {
 		t.Fatal("Create() expected error, got nil")
