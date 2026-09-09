@@ -3,18 +3,18 @@ package exhibition
 import (
 	"context"
 	"sync"
+
+	"museum/internal/domain"
 )
 
-// MemoryRepository は、
-// Exhibitionをメモリ上に保存するRepository。
+// MemoryRepository は
+// Exhibitionをメモリに保存する具体実装。
 //
-// 現段階ではPostgreSQL実装前の仮実装。
-//
-// サーバーを再起動するとデータは消える。
+// PostgreSQL実装前の開発・テスト用途として利用する。
 type MemoryRepository struct {
 	mu sync.Mutex
 
-	exhibitions []Exhibition
+	exhibitions []domain.Exhibition
 }
 
 // NewMemoryRepository は
@@ -22,7 +22,7 @@ type MemoryRepository struct {
 func NewMemoryRepository() *MemoryRepository {
 	return &MemoryRepository{
 		exhibitions: make(
-			[]Exhibition,
+			[]domain.Exhibition,
 			0,
 		),
 	}
@@ -31,7 +31,7 @@ func NewMemoryRepository() *MemoryRepository {
 // Save はExhibitionをメモリへ保存する。
 func (r *MemoryRepository) Save(
 	ctx context.Context,
-	exhibition Exhibition,
+	exhibition domain.Exhibition,
 ) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
