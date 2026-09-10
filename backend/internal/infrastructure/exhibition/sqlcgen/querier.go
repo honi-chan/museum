@@ -11,10 +11,13 @@ import (
 type Querier interface {
 	//
 	// Exhibitionを1件保存する。
-	//
-	// Go側のQueryコードはsqlcが自動生成するため、
-	// pgx.Exec()をRepository内で直接書かない。
 	CreateExhibition(ctx context.Context, arg CreateExhibitionParams) error
+	//
+	// IDを指定してExhibitionを1件取得する。
+	//
+	// :one を指定するとsqlcが
+	// 1件取得用のGoメソッドを自動生成する。
+	GetExhibitionByID(ctx context.Context, id string) (Exhibition, error)
 }
 
 var _ Querier = (*Queries)(nil)

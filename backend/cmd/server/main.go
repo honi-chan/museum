@@ -71,10 +71,17 @@ func main() {
 	// UseCase
 	// ==================================================
 
+	// Exhibition作成UseCase。
 	createExhibitionUseCase :=
 		usecase.NewCreateExhibitionUseCase(
 			exhibitionRepository,
 			idGenerator,
+		)
+
+	// Exhibition取得UseCase。
+	getExhibitionUseCase :=
+		usecase.NewGetExhibitionUseCase(
+			exhibitionRepository,
 		)
 
 	// ==================================================
@@ -84,6 +91,7 @@ func main() {
 	server :=
 		handler.NewExhibitionHandler(
 			createExhibitionUseCase,
+			getExhibitionUseCase,
 		)
 
 	// ==================================================

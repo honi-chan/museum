@@ -9,17 +9,22 @@ import (
 // ExhibitionRepository は
 // Exhibitionの永続化に必要な操作を定義する。
 //
-// 実際の保存先が
-//
-// - PostgreSQL
-// - MySQL
-// - Memory
-// - 外部API
-//
-// のどれなのかは、このinterfaceでは知らない。
+// PostgreSQL / Memoryなどの
+// 具体的な保存方式はここでは知らない。
 type ExhibitionRepository interface {
+	// Save はExhibitionを保存する。
 	Save(
 		ctx context.Context,
 		exhibition domain.Exhibition,
 	) error
+
+	// FindByID はIDを指定して
+	// Exhibitionを1件取得する。
+	//
+	// DBがPostgreSQLなのかMemoryなのかは
+	// UseCaseから意識させない。
+	FindByID(
+		ctx context.Context,
+		id string,
+	) (domain.Exhibition, error)
 }

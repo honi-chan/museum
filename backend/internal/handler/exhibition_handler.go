@@ -5,6 +5,7 @@ import (
 	"errors"
 
 	"museum/api/generated"
+	"museum/internal/repository"
 	"museum/internal/usecase"
 )
 
@@ -15,15 +16,23 @@ import (
 // OpenAPIから自動生成されるため、
 // Handlerでは手動定義しない。
 type ExhibitionHandler struct {
+	// Exhibition作成。
 	createUseCase *usecase.CreateExhibitionUseCase
+
+	// Exhibition取得。
+	getUseCase *usecase.GetExhibitionUseCase
 }
 
-// NewExhibitionHandler はHandlerを生成する。
+// NewExhibitionHandler は
+// Exhibition関連のUseCaseを受け取り
+// Handlerを生成する。
 func NewExhibitionHandler(
 	createUseCase *usecase.CreateExhibitionUseCase,
+	getUseCase *usecase.GetExhibitionUseCase,
 ) *ExhibitionHandler {
 	return &ExhibitionHandler{
 		createUseCase: createUseCase,
+		getUseCase:    getUseCase,
 	}
 }
 
@@ -102,6 +111,69 @@ func (h *ExhibitionHandler) CreateExhibition(
 		Title:       created.Title,
 		Description: created.Description,
 		CreatedAt:   created.CreatedAt,
+	}, nil
+}
+
+// --------------------------------------------------
+// Get Exhibition
+// --------------------------------------------------
+
+// GetExhibition は
+//
+// GET /exhibitions/{id}
+//
+// を処理する。
+//
+// Path parameterやHTTP Response型は
+// OpenAPIから自動生成される。
+func (
+	h *ExhibitionHandler,
+) GetExhibition(
+	ctx context.Context,
+	request generated.GetExhibitionRequestObject,
+) (
+	generated.GetExhibitionResponseObject,
+	error,
+) {
+	// --------------------------------------------------
+	// UseCase
+	// --------------------------------------------------
+
+	exhibition, err :=
+		h.getUseCase.Execute(
+			ctx,
+			request.Id,
+		)
+
+	if err != nil {
+		// Repository共通のNotFoundを
+		// HTTP 404へ変換する。
+		if errors.Is(
+			err,
+			repository.ErrNotFound,
+		) {
+			return generated.GetExhibition404JSONResponse{
+				Error: "exhibition not found",
+			}, nil
+		}
+
+		// 想定外エラーはerrorとして返す。
+		//
+		// Strict Serverが
+		// Internal Server Errorとして処理する。
+		return nil, err
+	}
+
+	// --------------------------------------------------
+	// Domain → API Response
+	// --------------------------------------------------
+
+	return generated.GetExhibition200JSONResponse{
+		Id:          exhibition.ID,
+		MuseumId:    exhibition.MuseumID,
+		Title:       exhibition.Title,
+		Description: exhibition.Description,
+		CreatedAt:   exhibition.CreatedAt,
 	}, nil
 }
 
