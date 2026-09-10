@@ -8,6 +8,7 @@ import (
 
 	"museum/api/generated"
 	"museum/internal/handler"
+	"museum/internal/handler/middleware"
 	"museum/internal/infrastructure/database"
 	exhibitioninfra "museum/internal/infrastructure/exhibition"
 	"museum/internal/usecase"
@@ -16,17 +17,8 @@ import (
 func main() {
 	ctx := context.Background()
 
-	// ==================================================
-	// Configuration
-	// ==================================================
-
-	// DB情報をコードに直接書かない。
-	//
-	// Local / CI / Productionで
-	// 同じコードを利用できるように環境変数から取得する。
-	databaseURL := os.Getenv(
-		"DATABASE_URL",
-	)
+	databaseURL :=
+		os.Getenv("DATABASE_URL")
 
 	if databaseURL == "" {
 		log.Fatal(
@@ -34,9 +26,9 @@ func main() {
 		)
 	}
 
-	// ==================================================
+	// ----------------------------------------
 	// Database
-	// ==================================================
+	// ----------------------------------------
 
 	postgresPool, err :=
 		database.NewPostgres(
@@ -50,15 +42,10 @@ func main() {
 
 	defer postgresPool.Close()
 
-	// ==================================================
+	// ----------------------------------------
 	// Infrastructure
-	// ==================================================
+	// ----------------------------------------
 
-	// MemoryRepositoryから
-	// PostgreSQLRepositoryへ変更。
-	//
-	// repository interfaceは変わらないため、
-	// UseCase側の修正は不要。
 	exhibitionRepository :=
 		exhibitioninfra.NewPostgresRepository(
 			postgresPool,
@@ -67,26 +54,24 @@ func main() {
 	idGenerator :=
 		exhibitioninfra.UUIDGenerator{}
 
-	// ==================================================
+	// ----------------------------------------
 	// UseCase
-	// ==================================================
+	// ----------------------------------------
 
-	// Exhibition作成UseCase。
 	createExhibitionUseCase :=
 		usecase.NewCreateExhibitionUseCase(
 			exhibitionRepository,
 			idGenerator,
 		)
 
-	// Exhibition取得UseCase。
 	getExhibitionUseCase :=
 		usecase.NewGetExhibitionUseCase(
 			exhibitionRepository,
 		)
 
-	// ==================================================
+	// ----------------------------------------
 	// Handler
-	// ==================================================
+	// ----------------------------------------
 
 	server :=
 		handler.NewExhibitionHandler(
@@ -94,24 +79,32 @@ func main() {
 			getExhibitionUseCase,
 		)
 
-	// ==================================================
-	// OpenAPI Server
-	// ==================================================
-
+	// OpenAPI Strict Server。
 	strictHandler :=
 		generated.NewStrictHandler(
 			server,
 			nil,
 		)
 
+	// OpenAPIによって生成されたHTTP Router。
 	httpHandler :=
 		generated.Handler(
 			strictHandler,
 		)
 
-	// ==================================================
-	// HTTP Server
-	// ==================================================
+	// ----------------------------------------
+	// Middleware
+	// ----------------------------------------
+
+	// BrowserからのFrontend → Backend通信を許可する。
+	rootHandler :=
+		middleware.CORS(
+			httpHandler,
+		)
+
+	// ----------------------------------------
+	// Server
+	// ----------------------------------------
 
 	log.Println(
 		"server started on :8080",
@@ -119,7 +112,7 @@ func main() {
 
 	if err := http.ListenAndServe(
 		":8080",
-		httpHandler,
+		rootHandler,
 	); err != nil {
 		log.Fatal(err)
 	}
