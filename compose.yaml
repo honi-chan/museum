@@ -1,14 +1,57 @@
 services:
   db:
     image: postgres:18
+
     environment:
+      # MUSEUM専用PostgreSQLユーザー。
+      #
+      # PostgreSQLの初回起動時に
+      # postgres公式Dockerイメージが自動作成する。
       POSTGRES_USER: museum
+
+      # Local開発専用Password。
       POSTGRES_PASSWORD: museum
+
+      # MUSEUM用Database。
       POSTGRES_DB: museum
+
     ports:
-      - "5432:5432"
+      # Host側の5432は使用しない。
+      #
+      # MacにインストールされているPostgreSQLなどと
+      # 衝突しないように15432へ固定する。
+      #
+      # Host:
+      #   localhost:15432
+      #
+      # Docker内部:
+      #   db:5432
+      - "15432:5432"
+
     volumes:
-      - museum-db:/var/lib/postgresql/data
+      # PostgreSQL 18では
+      # /var/lib/postgresql にVolumeをmountする。
+      - museum-db:/var/lib/postgresql
+
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U museum -d museum"
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    image: migrate/migrate:v4.19.1
+
+    volumes:
+      - ./backend/db/migrations:/migrations
+
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   museum-db:

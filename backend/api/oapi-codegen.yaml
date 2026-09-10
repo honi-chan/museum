@@ -1,0 +1,27 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/oapi-codegen/oapi-codegen/v2.8.0/configuration-schema.json
+
+# 自動生成コードのpackage。
+package: generated
+
+generate:
+
+  # Go標準のnet/http向けサーバーコードを生成する。
+  #
+  # EchoやGinなどのFrameworkを
+  # API境界に持ち込まずに済む。
+  std-http-server: true
+
+  # 型付きRequest / Responseを生成する。
+  #
+  # Handler内で
+  #
+  # json.NewDecoder(...)
+  # json.NewEncoder(...)
+  #
+  # を毎回書かなくてよくなる。
+  strict-server: true
+
+  # OpenAPI schemaからGo structを生成する。
+  models: true
+
+output: generated/server.gen.go
