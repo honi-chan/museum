@@ -1,25 +1,68 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
 
 	"museum/api/generated"
 	"museum/internal/handler"
+	"museum/internal/infrastructure/database"
 	exhibitioninfra "museum/internal/infrastructure/exhibition"
 	"museum/internal/usecase"
 )
 
 func main() {
+	ctx := context.Background()
+
+	// ==================================================
+	// Configuration
+	// ==================================================
+
+	// DB情報をコードに直接書かない。
+	//
+	// Local / CI / Productionで
+	// 同じコードを利用できるように環境変数から取得する。
+	databaseURL := os.Getenv(
+		"DATABASE_URL",
+	)
+
+	if databaseURL == "" {
+		log.Fatal(
+			"DATABASE_URL is required",
+		)
+	}
+
+	// ==================================================
+	// Database
+	// ==================================================
+
+	postgresPool, err :=
+		database.NewPostgres(
+			ctx,
+			databaseURL,
+		)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer postgresPool.Close()
+
 	// ==================================================
 	// Infrastructure
 	// ==================================================
 
-	// 現在はMemoryRepository。
+	// MemoryRepositoryから
+	// PostgreSQLRepositoryへ変更。
 	//
-	// 後でPostgreSQLRepositoryへ差し替える。
+	// repository interfaceは変わらないため、
+	// UseCase側の修正は不要。
 	exhibitionRepository :=
-		exhibitioninfra.NewMemoryRepository()
+		exhibitioninfra.NewPostgresRepository(
+			postgresPool,
+		)
 
 	idGenerator :=
 		exhibitioninfra.UUIDGenerator{}
@@ -44,26 +87,15 @@ func main() {
 		)
 
 	// ==================================================
-	// OpenAPI Strict Server
+	// OpenAPI Server
 	// ==================================================
 
-	// HandlerをStrict Serverでラップする。
-	//
-	// OpenAPIで定義されたRequest / Responseを
-	// HTTPへ変換する処理は自動生成コードが担当する。
 	strictHandler :=
 		generated.NewStrictHandler(
 			server,
 			nil,
 		)
 
-	// OpenAPIから生成されたrouterを使用する。
-	//
-	// ここで
-	//
-	// mux.HandleFunc(...)
-	//
-	// をAPIごとに書かなくてよい。
 	httpHandler :=
 		generated.Handler(
 			strictHandler,

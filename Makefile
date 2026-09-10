@@ -2,134 +2,105 @@
 # MUSEUM Development Makefile
 # ============================================================
 #
-# 開発・テスト・コード生成・Lintなどの入口を
-# このMakefileに統一する。
+# 開発者やAIエージェントが、
+# 毎回長いコマンドを手入力しなくて済むように
+# 開発・生成・テスト・DB操作を共通化する。
 #
-# 人間が実行しても、AIが実行しても、
-# 同じコマンドで同じ結果になることを目的とする。
+# 基本的には、
 #
-# 主なコマンド:
-#
-#   make setup
-#   make dev
+#   make backend-setup
 #   make generate
-#   make test
-#   make lint
 #   make check
 #
+# を使えばよい。
+#
 # ============================================================
-
 
 .PHONY: \
 	setup \
 	dev \
-	down \
 	generate \
 	backend-generate \
-	generated-check \
-	format \
-	backend-format \
 	test \
 	backend-test \
 	lint \
-	backend-lint \
 	frontend-lint \
 	design-check \
-	check
+	check \
+	generated-check \
+	db-up \
+	db-down \
+	db-migrate-up \
+	db-migrate-down \
+	db-migrate-version \
+	backend-setup
 
 
 # ============================================================
 # Setup
 # ============================================================
 
-# 初回セットアップ。
+# プロジェクト全体の初回セットアップ。
 #
-# 以下をまとめて実行する。
+# PostgreSQL起動
+# Backend依存関係取得
+# Frontend依存関係取得
+# コード生成
+# Migration
 #
-# - PostgreSQL起動
-# - Backend依存関係取得
-# - Frontend依存関係取得
-# - OpenAPIコード生成
+# までまとめて実行する。
 setup:
-	docker compose up -d
+	docker compose up -d db
 	cd backend && go mod download
 	cd frontend && npm install
-	$(MAKE) generate
+	cd backend && go generate ./...
+	docker compose run --rm migrate \
+		-path=/migrations \
+		-database="postgres://museum:museum@db:5432/museum?sslmode=disable" \
+		up
 
 
 # ============================================================
 # Development
 # ============================================================
 
-# Docker Compose上の開発用サービスを起動する。
+# 開発用サービスを起動する。
 #
-# 現時点ではPostgreSQLなどの
-# 開発用Infrastructureを起動する。
+# 現時点ではPostgreSQLを起動する。
 dev:
-	docker compose up -d
-
-
-# Docker Compose上のサービスを停止する。
-down:
-	docker compose down
+	docker compose up -d db
 
 
 # ============================================================
 # Code Generation
 # ============================================================
 
-# すべての自動生成コードを更新する。
+# プロジェクト内の自動生成コードを更新する。
 #
-# 今後、
+# 現在:
 #
-# - OpenAPI
-# - mock
-# - DB query
+# OpenAPI
+#   ↓
+# oapi-codegen
+#   ↓
+# HTTP Server / Request / Response
 #
-# などのコード生成が増えた場合も
-# このコマンドを入口にする。
+# SQL
+#   ↓
+# sqlc
+#   ↓
+# PostgreSQL Query Code
+#
+# 将来コード生成が増えても、
+# 開発者は make generate だけ実行すればよい。
 generate: backend-generate
 
 
 # Backendのコード生成。
 #
-# 現在はOpenAPIから、
-# Request / Response / Router / Server Interface
-# などを生成する。
+# backend配下の //go:generate をすべて実行する。
 backend-generate:
 	cd backend && go generate ./...
-
-
-# OpenAPIなどの定義と生成コードが
-# 一致しているか確認する。
-#
-# 例:
-#
-# openapi.yamlを変更
-# ↓
-# server.gen.goを更新し忘れる
-# ↓
-# git diffが発生
-# ↓
-# このコマンドが失敗する
-#
-# CIでも利用する想定。
-generated-check:
-	cd backend && go generate ./...
-	git diff --exit-code
-
-
-# ============================================================
-# Format
-# ============================================================
-
-# プロジェクト全体のフォーマット。
-format: backend-format
-
-
-# Goコードをgofmtで整形する。
-backend-format:
-	cd backend && gofmt -w .
 
 
 # ============================================================
@@ -138,12 +109,12 @@ backend-format:
 
 # プロジェクト全体のテスト。
 #
-# Frontendテストを導入した場合は
-# ここに追加する。
+# 現時点ではBackendのみ。
+# Frontendテスト導入後はここへ追加する。
 test: backend-test
 
 
-# Goの全テストを実行する。
+# Backendの全テストを実行する。
 backend-test:
 	cd backend && go test ./...
 
@@ -153,14 +124,7 @@ backend-test:
 # ============================================================
 
 # プロジェクト全体のLint。
-lint: backend-lint frontend-lint design-check
-
-
-# Backendの静的チェック。
-#
-# go vetはGo標準の静的解析ツール。
-backend-lint:
-	cd backend && go vet ./...
+lint: frontend-lint design-check
 
 
 # FrontendのLint。
@@ -168,34 +132,124 @@ frontend-lint:
 	cd frontend && npm run lint
 
 
-# Google Labs design.mdの仕様に沿って
-# DESIGN.mdを検証する。
+# DESIGN.mdをGoogle design.md仕様で検証する。
+#
+# デザイントークン、
+# section構造、
+# token参照などをチェックする。
 design-check:
 	npx @google/design.md lint DESIGN.md
 
 
 # ============================================================
-# Full Check
+# Check
 # ============================================================
 
-# コミット前に実行する標準チェック。
+# コミット前の標準チェック。
 #
-# 基本的には開発者もAIも、
-# 修正完了後にこのコマンドを通す。
+# 1. 自動生成
+# 2. Go Format
+# 3. Backend Test
+# 4. Frontend Lint
+# 5. DESIGN.md Check
 #
-# 実行内容:
+# をまとめて実行する。
 #
-# 1. OpenAPIコード生成
-# 2. Go format
-# 3. Go test
-# 4. Go vet
-# 5. Frontend lint
-# 6. DESIGN.md lint
-#
-# 将来的にCIもこのmake checkを呼ぶことで、
-# ローカルとCIのチェック内容を統一する。
+# 基本的にはコミット前にこれを実行する。
 check:
-	$(MAKE) generate
-	$(MAKE) format
-	$(MAKE) test
-	$(MAKE) lint
+	cd backend && go generate ./...
+	cd backend && gofmt -w .
+	cd backend && go test ./...
+	cd frontend && npm run lint
+	npx @google/design.md lint DESIGN.md
+
+
+# ============================================================
+# Generated Code Check
+# ============================================================
+
+# OpenAPIやSQLと、
+# 自動生成コードが一致しているか確認する。
+#
+# 例えば、
+#
+# openapi.yamlを変更
+# ↓
+# server.gen.goを更新し忘れる
+#
+# といった事故を検出できる。
+#
+# CIでもこのTargetを使用できる。
+generated-check:
+	cd backend && go generate ./...
+	git diff --exit-code
+
+
+# ============================================================
+# Database
+# ============================================================
+
+# PostgreSQLを起動する。
+db-up:
+	docker compose up -d db
+
+
+# Docker Compose環境を停止する。
+#
+# DB Volumeは削除しないため、
+# データは保持される。
+db-down:
+	docker compose down
+
+
+# 未適用Migrationをすべて適用する。
+db-migrate-up:
+	docker compose run --rm migrate \
+		-path=/migrations \
+		-database="postgres://museum:museum@db:5432/museum?sslmode=disable" \
+		up
+
+
+# Migrationを1つ戻す。
+#
+# 開発中に直前のMigrationを戻したい場合に使用する。
+db-migrate-down:
+	docker compose run --rm migrate \
+		-path=/migrations \
+		-database="postgres://museum:museum@db:5432/museum?sslmode=disable" \
+		down 1
+
+
+# 現在適用されているMigration Versionを確認する。
+db-migrate-version:
+	docker compose run --rm migrate \
+		-path=/migrations \
+		-database="postgres://museum:museum@db:5432/museum?sslmode=disable" \
+		version
+
+
+# ============================================================
+# Backend Setup
+# ============================================================
+
+# Backend開発環境をまとめて準備する。
+#
+# PostgreSQL起動
+# ↓
+# Migration
+# ↓
+# OpenAPI / sqlcコード生成
+# ↓
+# Backend Test
+#
+# 新しいPCや、
+# Backend環境を作り直した際は
+# 基本的にこれを実行すればよい。
+backend-setup:
+	docker compose up -d db
+	docker compose run --rm migrate \
+		-path=/migrations \
+		-database="postgres://museum:museum@db:5432/museum?sslmode=disable" \
+		up
+	cd backend && go generate ./...
+	cd backend && go test ./...
