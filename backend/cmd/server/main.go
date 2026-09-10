@@ -4,30 +4,29 @@ import (
 	"log"
 	"net/http"
 
+	"museum/api/generated"
 	"museum/internal/handler"
 	exhibitioninfra "museum/internal/infrastructure/exhibition"
 	"museum/internal/usecase"
 )
 
 func main() {
-	// --------------------------------
+	// ==================================================
 	// Infrastructure
-	// --------------------------------
+	// ==================================================
 
 	// 現在はMemoryRepository。
 	//
-	// 将来ここをPostgreSQLRepositoryへ変更しても、
-	// HandlerやUseCaseは変更しない。
+	// 後でPostgreSQLRepositoryへ差し替える。
 	exhibitionRepository :=
 		exhibitioninfra.NewMemoryRepository()
 
-	// ID生成の具体実装。
 	idGenerator :=
 		exhibitioninfra.UUIDGenerator{}
 
-	// --------------------------------
+	// ==================================================
 	// UseCase
-	// --------------------------------
+	// ==================================================
 
 	createExhibitionUseCase :=
 		usecase.NewCreateExhibitionUseCase(
@@ -35,56 +34,53 @@ func main() {
 			idGenerator,
 		)
 
-	// --------------------------------
+	// ==================================================
 	// Handler
-	// --------------------------------
+	// ==================================================
 
-	exhibitionHandler :=
+	server :=
 		handler.NewExhibitionHandler(
 			createExhibitionUseCase,
 		)
 
-	// --------------------------------
-	// Router
-	// --------------------------------
+	// ==================================================
+	// OpenAPI Strict Server
+	// ==================================================
 
-	mux := http.NewServeMux()
+	// HandlerをStrict Serverでラップする。
+	//
+	// OpenAPIで定義されたRequest / Responseを
+	// HTTPへ変換する処理は自動生成コードが担当する。
+	strictHandler :=
+		generated.NewStrictHandler(
+			server,
+			nil,
+		)
 
-	mux.HandleFunc(
-		"GET /health",
-		health,
+	// OpenAPIから生成されたrouterを使用する。
+	//
+	// ここで
+	//
+	// mux.HandleFunc(...)
+	//
+	// をAPIごとに書かなくてよい。
+	httpHandler :=
+		generated.Handler(
+			strictHandler,
+		)
+
+	// ==================================================
+	// HTTP Server
+	// ==================================================
+
+	log.Println(
+		"server started on :8080",
 	)
-
-	mux.HandleFunc(
-		"POST /exhibitions",
-		exhibitionHandler.Create,
-	)
-
-	log.Println("server started on :8080")
 
 	if err := http.ListenAndServe(
 		":8080",
-		mux,
+		httpHandler,
 	); err != nil {
 		log.Fatal(err)
 	}
-}
-
-// health はサーバー生存確認用。
-func health(
-	w http.ResponseWriter,
-	r *http.Request,
-) {
-	w.Header().Set(
-		"Content-Type",
-		"application/json",
-	)
-
-	w.WriteHeader(
-		http.StatusOK,
-	)
-
-	_, _ = w.Write(
-		[]byte(`{"status":"ok"}`),
-	)
 }

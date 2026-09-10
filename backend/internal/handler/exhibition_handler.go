@@ -1,30 +1,19 @@
 package handler
 
 import (
+	"context"
 	"errors"
-	"log"
-	"net/http"
 
-	"museum/internal/handler/httpx"
+	"museum/api/generated"
 	"museum/internal/usecase"
 )
 
 // ExhibitionHandler は
-// Exhibitionに関するHTTP通信を担当する。
+// OpenAPIから生成されたStrictServerInterfaceを実装する。
 //
-// ビジネスルールはここには書かない。
-//
-// Handlerの責務は、
-//
-// HTTP Request
-// ↓
-// UseCase Input
-// ↓
-// UseCase実行
-// ↓
-// HTTP Response
-//
-// への変換だけにする。
+// HTTP Request / Responseの型は
+// OpenAPIから自動生成されるため、
+// Handlerでは手動定義しない。
 type ExhibitionHandler struct {
 	createUseCase *usecase.CreateExhibitionUseCase
 }
@@ -38,131 +27,107 @@ func NewExhibitionHandler(
 	}
 }
 
-// createExhibitionRequest は
-// HTTP Request専用のデータ構造。
-//
-// DomainモデルをそのままHTTPに公開しない。
-type createExhibitionRequest struct {
-	MuseumID    string `json:"museum_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
+// --------------------------------------------------
+// Create Exhibition
+// --------------------------------------------------
 
-// createExhibitionResponse は
-// HTTP Response専用のデータ構造。
+// CreateExhibition は
+// OpenAPIの
 //
-// APIとして何を公開するかは
-// Handler側で明示的に決める。
-type createExhibitionResponse struct {
-	ID          string `json:"id"`
-	MuseumID    string `json:"museum_id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-}
-
-// Create はPOST /exhibitionsを処理する。
-func (h *ExhibitionHandler) Create(
-	w http.ResponseWriter,
-	r *http.Request,
+//	operationId: createExhibition
+//
+// に対応するHandler。
+//
+// Request / Response型はすべて
+// oapi-codegenが生成している。
+func (h *ExhibitionHandler) CreateExhibition(
+	ctx context.Context,
+	request generated.CreateExhibitionRequestObject,
+) (
+	generated.CreateExhibitionResponseObject,
+	error,
 ) {
-	var request createExhibitionRequest
-
-	// -----------------------------
-	// Request Decode
-	// -----------------------------
-
-	// HTTP Request BodyをJSONから構造体へ変換する。
+	// request.BodyもOpenAPIから生成された型。
 	//
-	// JSON処理そのものはhttpxへ委譲する。
-	if err := httpx.DecodeJSON(
-		r,
-		&request,
-	); err != nil {
-		writeError(
-			w,
-			http.StatusBadRequest,
-			errors.New("invalid request body"),
-		)
-
-		return
+	// json.NewDecoderは不要。
+	if request.Body == nil {
+		return generated.CreateExhibition400JSONResponse{
+			Error: "request body is required",
+		}, nil
 	}
 
-	// -----------------------------
-	// HTTP → UseCase
-	// -----------------------------
+	// --------------------------------------------------
+	// API Model → UseCase Input
+	// --------------------------------------------------
 
-	// HTTP専用Requestから
-	// UseCase専用Inputへ変換する。
 	input := usecase.CreateExhibitionInput{
-		MuseumID:    request.MuseumID,
-		Title:       request.Title,
-		Description: request.Description,
+		MuseumID: request.Body.MuseumId,
+		Title:    request.Body.Title,
 	}
 
-	// -----------------------------
+	// descriptionはOpenAPI上optionalなので
+	// pointerとして生成される可能性がある。
+	if request.Body.Description != nil {
+		input.Description =
+			*request.Body.Description
+	}
+
+	// --------------------------------------------------
 	// UseCase
-	// -----------------------------
+	// --------------------------------------------------
 
 	created, err := h.createUseCase.Execute(
-		r.Context(),
+		ctx,
 		input,
 	)
 
 	if err != nil {
-		writeError(
-			w,
-			http.StatusBadRequest,
-			err,
-		)
-
-		return
+		// 現時点ではUseCase errorを
+		// Bad Requestとして扱う。
+		//
+		// 後でDomain Errorを導入して、
+		// 400 / 404 / 409 / 500を自動分類する。
+		return generated.CreateExhibition400JSONResponse{
+			Error: err.Error(),
+		}, nil
 	}
 
-	// -----------------------------
-	// Domain → HTTP
-	// -----------------------------
+	// --------------------------------------------------
+	// Domain → API Response
+	// --------------------------------------------------
 
-	response := createExhibitionResponse{
-		ID:          created.ID,
-		MuseumID:    created.MuseumID,
+	return generated.CreateExhibition201JSONResponse{
+		Id:          created.ID,
+		MuseumId:    created.MuseumID,
 		Title:       created.Title,
 		Description: created.Description,
-	}
-
-	// -----------------------------
-	// Response
-	// -----------------------------
-
-	if err := httpx.WriteJSON(
-		w,
-		http.StatusCreated,
-		response,
-	); err != nil {
-		log.Printf(
-			"failed to write response: %v",
-			err,
-		)
-	}
+		CreatedAt:   created.CreatedAt,
+	}, nil
 }
 
-// writeError はHandler内部で使う
-// エラー出力の補助関数。
-//
-// JSON書き込み自体が失敗した場合だけ
-// Server側のログとして記録する。
-func writeError(
-	w http.ResponseWriter,
-	status int,
-	err error,
+// --------------------------------------------------
+// Health
+// --------------------------------------------------
+
+// GetHealth はAPIの生存確認を行う。
+func (h *ExhibitionHandler) GetHealth(
+	ctx context.Context,
+	request generated.GetHealthRequestObject,
+) (
+	generated.GetHealthResponseObject,
+	error,
 ) {
-	if writeErr := httpx.WriteError(
-		w,
-		status,
-		err,
-	); writeErr != nil {
-		log.Printf(
-			"failed to write error response: %v",
-			writeErr,
-		)
-	}
+	return generated.GetHealth200JSONResponse{
+		Status: "ok",
+	}, nil
 }
+
+// Compile-time check.
+//
+// ExhibitionHandlerがOpenAPIで要求される
+// interfaceを満たしていなければ
+// コンパイル時にエラーになる。
+var _ generated.StrictServerInterface = (*ExhibitionHandler)(nil)
+
+// errors importを将来使う予定がない場合は削除してOK。
+var _ = errors.New

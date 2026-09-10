@@ -1,0 +1,152 @@
+openapi: 3.1.0
+
+info:
+  title: MUSEUM API
+  version: 0.1.0
+  description: |
+    MUSEUM backend API.
+
+    このファイルをAPI仕様の正本とする。
+
+    Handler側でRequest/Response型を
+    手書きしない。
+
+    API変更時はまずこのファイルを変更し、
+    コード生成を実行する。
+
+servers:
+  - url: http://localhost:8080
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+
+      summary: ヘルスチェック
+
+      responses:
+        "200":
+          description: APIが正常に稼働している
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /exhibitions:
+    post:
+      operationId: createExhibition
+
+      summary: 展示室を作成する
+
+      requestBody:
+        required: true
+
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateExhibitionRequest"
+
+      responses:
+        "201":
+          description: 展示室作成成功
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExhibitionResponse"
+
+        "400":
+          description: リクエスト内容が不正
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+        "500":
+          description: サーバー内部エラー
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+
+components:
+
+  schemas:
+
+    HealthResponse:
+      type: object
+
+      required:
+        - status
+
+      properties:
+        status:
+          type: string
+          example: ok
+
+
+    CreateExhibitionRequest:
+      type: object
+
+      required:
+        - museum_id
+        - title
+
+      properties:
+
+        museum_id:
+          type: string
+          description: 展示室が所属するMuseumのID
+
+        title:
+          type: string
+          description: 展示室タイトル
+          minLength: 1
+
+        description:
+          type: string
+          description: 展示室説明
+
+
+    ExhibitionResponse:
+      type: object
+
+      required:
+        - id
+        - museum_id
+        - title
+        - description
+        - created_at
+
+      properties:
+
+        id:
+          type: string
+
+        museum_id:
+          type: string
+
+        title:
+          type: string
+
+        description:
+          type: string
+
+        created_at:
+          type: string
+          format: date-time
+
+
+    ErrorResponse:
+      type: object
+
+      required:
+        - error
+
+      properties:
+        error:
+          type: string
