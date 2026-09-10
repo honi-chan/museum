@@ -1,26 +1,600 @@
-@import "tailwindcss";
+/* ==================================================
+ * MUSEUM Design Tokens
+ *
+ * UI全体で使用する値をここへ集約する。
+ *
+ * Componentごとに色やspacingを直接定義すると、
+ * デザイン変更時の修正箇所が増えるため、
+ * CSS VariablesをDesign Tokenとして使用する。
+ * ================================================== */
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ----------------------------------------
+   * Colors
+   * ---------------------------------------- */
+
+  /* 純白ではなく、美術館の壁のような暖色系白。 */
+  --color-background: #f4f1ea;
+
+  /* Main text。完全な黒より少し柔らかい。 */
+  --color-text-primary: #191919;
+
+  /* Caption / metadata用。 */
+  --color-text-secondary: #74716b;
+
+  /* 非常に薄い境界線。 */
+  --color-border: #d8d4cc;
+
+  /* Error。 */
+  --color-error: #a63d32;
+
+  /* ----------------------------------------
+   * Spacing
+   * ---------------------------------------- */
+
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 2rem;
+  --space-lg: 4rem;
+  --space-xl: 8rem;
+  --space-2xl: 12rem;
+
+  /* ----------------------------------------
+   * Layout
+   * ---------------------------------------- */
+
+  --content-width: 1200px;
+  --page-padding: clamp(
+    1.5rem,
+    5vw,
+    5rem
+  );
+
+  /* ----------------------------------------
+   * Typography
+   * ---------------------------------------- */
+
+  --font-sans:
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  --font-serif:
+    Georgia,
+    "Times New Roman",
+    serif;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+/* ==================================================
+ * Reset
+ * ================================================== */
+
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+
+  background:
+    var(--color-background);
+
+  color:
+    var(--color-text-primary);
+
+  font-family:
+    var(--font-sans);
+
+  -webkit-font-smoothing:
+    antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+}
+
+
+/* ==================================================
+ * Museum
+ * ================================================== */
+
+.museum {
+  width: min(
+    100%,
+    var(--content-width)
+  );
+
+  margin: 0 auto;
+
+  padding:
+    0
+    var(--page-padding)
+    var(--space-xl);
+}
+
+
+/* ==================================================
+ * Header
+ * ================================================== */
+
+.museum-header {
+  min-height: 120px;
+
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  border-bottom:
+    1px solid
+    var(--color-border);
+}
+
+.museum-header__eyebrow {
+  margin: 0 0 0.4rem;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+}
+
+.museum-header__title {
+  margin: 0;
+
+  font-family:
+    var(--font-serif);
+
+  font-size: 1rem;
+  font-weight: 400;
+}
+
+.museum-header__navigation {
+  display: flex;
+
+  gap: var(--space-md);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.75rem;
+}
+
+.museum-header__navigation a {
+  transition:
+    color 160ms ease;
+}
+
+.museum-header__navigation a:hover {
+  color:
+    var(--color-text-primary);
+}
+
+
+/* ==================================================
+ * Introduction
+ * ================================================== */
+
+.museum-introduction {
+  min-height: 75vh;
+
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    4fr
+    1.5fr;
+
+  align-items: center;
+
+  column-gap: var(--space-lg);
+}
+
+.museum-introduction__number {
+  align-self: start;
+
+  margin-top:
+    var(--space-xl);
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+}
+
+.museum-introduction__statement {
+  margin: 0;
+
+  font-family:
+    var(--font-serif);
+
+  font-size:
+    clamp(
+      3rem,
+      7vw,
+      7rem
+    );
+
+  font-weight: 400;
+
+  line-height: 0.95;
+
+  letter-spacing: -0.045em;
+}
+
+.museum-introduction__description {
+  align-self: end;
+
+  margin-bottom:
+    var(--space-xl);
+
+  color:
+    var(--color-text-secondary);
+
+  font-family:
+    var(--font-serif);
+
+  font-size: 0.9rem;
+
+  line-height: 1.7;
+}
+
+
+/* ==================================================
+ * Section
+ * ================================================== */
+
+.section-header {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    5.5fr;
+
+  padding-bottom:
+    var(--space-md);
+
+  border-bottom:
+    1px solid
+    var(--color-text-primary);
+}
+
+.section-header__number {
+  margin: 0;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.7rem;
+}
+
+.section-header__title {
+  margin: 0;
+
+  font-family:
+    var(--font-serif);
+
+  font-size: 1rem;
+
+  font-weight: 400;
+}
+
+
+/* ==================================================
+ * Exhibition List
+ * ================================================== */
+
+.exhibitions {
+  padding:
+    var(--space-xl)
+    0;
+}
+
+.exhibition-list {
+  margin-top:
+    var(--space-lg);
+}
+
+.exhibition {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    5.5fr;
+
+  min-height: 180px;
+
+  padding:
+    var(--space-md)
+    0;
+
+  border-bottom:
+    1px solid
+    var(--color-border);
+}
+
+.exhibition__number {
+  margin: 0;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.7rem;
+}
+
+.exhibition__title {
+  margin: 0;
+
+  font-family:
+    var(--font-serif);
+
+  font-size:
+    clamp(
+      2rem,
+      4vw,
+      4.5rem
+    );
+
+  font-weight: 400;
+
+  letter-spacing: -0.035em;
+}
+
+.exhibition__description {
+  max-width: 380px;
+
+  margin:
+    var(--space-sm)
+    0
+    0;
+
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.8rem;
+
+  line-height: 1.6;
+}
+
+
+/* ==================================================
+ * Create Exhibition
+ * ================================================== */
+
+.create-exhibition {
+  padding:
+    var(--space-xl)
+    0;
+}
+
+.create-exhibition__content {
+  display: grid;
+
+  grid-template-columns:
+    1fr
+    2fr;
+
+  gap:
+    var(--space-xl);
+
+  padding-top:
+    var(--space-lg);
+}
+
+.create-exhibition__description {
+  margin: 0;
+
+  max-width: 260px;
+
+  color:
+    var(--color-text-secondary);
+
+  font-family:
+    var(--font-serif);
+
+  line-height: 1.6;
+}
+
+
+/* ==================================================
+ * Exhibition Form
+ * ================================================== */
+
+.exhibition-form {
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--space-md);
+}
+
+.exhibition-form__field {
+  display: flex;
+
+  flex-direction: column;
+
+  gap:
+    var(--space-xs);
+}
+
+.exhibition-form__label {
+  color:
+    var(--color-text-secondary);
+
+  font-size: 0.7rem;
+
+  letter-spacing:
+    0.08em;
+
+  text-transform:
+    uppercase;
+}
+
+.exhibition-form__input,
+.exhibition-form__textarea {
+  width: 100%;
+
+  padding:
+    1rem
+    0;
+
+  border: 0;
+
+  border-bottom:
+    1px solid
+    var(--color-border);
+
+  border-radius: 0;
+
+  outline: none;
+
+  background:
+    transparent;
+
+  color:
+    var(--color-text-primary);
+}
+
+.exhibition-form__input {
+  font-family:
+    var(--font-serif);
+
+  font-size:
+    clamp(
+      1.8rem,
+      3vw,
+      3rem
+    );
+}
+
+.exhibition-form__textarea {
+  resize: vertical;
+
+  line-height: 1.6;
+}
+
+.exhibition-form__input:focus,
+.exhibition-form__textarea:focus {
+  border-color:
+    var(--color-text-primary);
+}
+
+.exhibition-form__submit {
+  align-self: flex-start;
+
+  margin-top:
+    var(--space-sm);
+
+  padding:
+    0.8rem
+    0;
+
+  border: 0;
+
+  border-bottom:
+    1px solid
+    var(--color-text-primary);
+
+  background:
+    transparent;
+
+  color:
+    var(--color-text-primary);
+
+  cursor: pointer;
+
+  font-size: 0.75rem;
+
+  letter-spacing:
+    0.08em;
+
+  text-transform:
+    uppercase;
+}
+
+.exhibition-form__submit:disabled {
+  opacity: 0.35;
+
+  cursor:
+    not-allowed;
+}
+
+.exhibition-form__error {
+  margin: 0;
+
+  color:
+    var(--color-error);
+
+  font-size: 0.8rem;
+}
+
+
+/* ==================================================
+ * Responsive
+ * ================================================== */
+
+@media (
+  max-width: 768px
+) {
+  .museum-header {
+    min-height: 96px;
+  }
+
+  .museum-header__navigation {
+    display: none;
+  }
+
+  .museum-introduction {
+    min-height: 70vh;
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    justify-content: center;
+
+    gap:
+      var(--space-md);
+  }
+
+  .museum-introduction__number {
+    margin: 0;
+  }
+
+  .museum-introduction__description {
+    margin: 0;
+
+    max-width: 300px;
+  }
+
+  .section-header,
+  .exhibition {
+    grid-template-columns:
+      60px
+      1fr;
+  }
+
+  .create-exhibition__content {
+    grid-template-columns:
+      1fr;
+
+    gap:
+      var(--space-lg);
+  }
 }

@@ -3,26 +3,11 @@ openapi: 3.1.0
 info:
   title: MUSEUM API
   version: 0.1.0
-  description: |
-    MUSEUM backend API.
-
-    このファイルをAPI仕様の正本とする。
-
-    Handler側でRequest/Response型を
-    手書きしない。
-
-    API変更時はまずこのファイルを変更し、
-    コード生成を実行する。
-
-servers:
-  - url: http://localhost:8080
 
 paths:
   /health:
     get:
       operationId: getHealth
-
-      summary: ヘルスチェック
 
       responses:
         "200":
@@ -33,6 +18,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
 
+  # ----------------------------------------
+  # Exhibition作成
+  # ----------------------------------------
   /exhibitions:
     post:
       operationId: createExhibition
@@ -72,11 +60,61 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ----------------------------------------
+  # Exhibition取得
+  #
+  # /exhibitions の子要素ではなく、
+  # paths直下の兄弟として定義する。
+  # ----------------------------------------
+  /exhibitions/{id}:
+    get:
+      # このoperationIdから
+      #
+      # GetExhibitionRequestObject
+      # GetExhibitionResponseObject
+      # GetExhibition(...)
+      #
+      # が生成される。
+      operationId: getExhibition
+
+      summary: 展示室を取得する
+
+      parameters:
+        - name: id
+          in: path
+          required: true
+
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: 展示室取得成功
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExhibitionResponse"
+
+        "404":
+          description: 展示室が存在しない
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+        "500":
+          description: サーバー内部エラー
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 
 components:
-
   schemas:
-
     HealthResponse:
       type: object
 
@@ -86,8 +124,6 @@ components:
       properties:
         status:
           type: string
-          example: ok
-
 
     CreateExhibitionRequest:
       type: object
@@ -97,20 +133,14 @@ components:
         - title
 
       properties:
-
         museum_id:
           type: string
-          description: 展示室が所属するMuseumのID
 
         title:
           type: string
-          description: 展示室タイトル
-          minLength: 1
 
         description:
           type: string
-          description: 展示室説明
-
 
     ExhibitionResponse:
       type: object
@@ -123,7 +153,6 @@ components:
         - created_at
 
       properties:
-
         id:
           type: string
 
@@ -139,7 +168,6 @@ components:
         created_at:
           type: string
           format: date-time
-
 
     ErrorResponse:
       type: object

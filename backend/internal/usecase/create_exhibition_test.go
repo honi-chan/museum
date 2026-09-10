@@ -31,20 +31,23 @@ func (g fixedIDGenerator) Generate() string {
 // --------------------------------------------------
 
 // fakeExhibitionRepository は
-// テスト専用のRepository実装。
+// UseCaseテスト専用Repository。
 //
-// PostgreSQLなどの本物のDBは使わず、
-// Save()されたExhibitionをメモリ上に保持する。
+// PostgreSQLを起動せずに
+// UseCase単体テストを実行する。
 type fakeExhibitionRepository struct {
 	saved domain.Exhibition
-	err   error
+
+	// FindByIDで返すExhibition。
+	found domain.Exhibition
+
+	// Repositoryから返す共通エラー。
+	err error
 }
 
-// Save は保存されたExhibitionを記録する。
-//
-// errが設定されている場合は、
-// DB障害などを想定してそのerrorを返す。
-func (r *fakeExhibitionRepository) Save(
+func (
+	r *fakeExhibitionRepository,
+) Save(
 	ctx context.Context,
 	exhibition domain.Exhibition,
 ) error {
@@ -55,6 +58,22 @@ func (r *fakeExhibitionRepository) Save(
 	r.saved = exhibition
 
 	return nil
+}
+
+// FindByID はテスト用の
+// Exhibition取得処理。
+func (
+	r *fakeExhibitionRepository,
+) FindByID(
+	ctx context.Context,
+	id string,
+) (domain.Exhibition, error) {
+	if r.err != nil {
+		return domain.Exhibition{},
+			r.err
+	}
+
+	return r.found, nil
 }
 
 // --------------------------------------------------

@@ -37,9 +37,6 @@ type CreateExhibitionParams struct {
 }
 
 // Exhibitionを1件保存する。
-//
-// Go側のQueryコードはsqlcが自動生成するため、
-// pgx.Exec()をRepository内で直接書かない。
 func (q *Queries) CreateExhibition(ctx context.Context, arg CreateExhibitionParams) error {
 	_, err := q.db.Exec(ctx, createExhibition,
 		arg.ID,
@@ -49,4 +46,33 @@ func (q *Queries) CreateExhibition(ctx context.Context, arg CreateExhibitionPara
 		arg.CreatedAt,
 	)
 	return err
+}
+
+const getExhibitionByID = `-- name: GetExhibitionByID :one
+SELECT
+    id,
+    museum_id,
+    title,
+    description,
+    created_at
+FROM exhibitions
+WHERE id = $1
+LIMIT 1
+`
+
+// IDを指定してExhibitionを1件取得する。
+//
+// :one を指定するとsqlcが
+// 1件取得用のGoメソッドを自動生成する。
+func (q *Queries) GetExhibitionByID(ctx context.Context, id string) (Exhibition, error) {
+	row := q.db.QueryRow(ctx, getExhibitionByID, id)
+	var i Exhibition
+	err := row.Scan(
+		&i.ID,
+		&i.MuseumID,
+		&i.Title,
+		&i.Description,
+		&i.CreatedAt,
+	)
+	return i, err
 }

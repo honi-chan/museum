@@ -1,69 +1,167 @@
-import Image from "next/image";
+import CreateExhibitionForm from "@/components/exhibition/CreateExhibitionForm";
 
+/**
+ * Museum Home
+ *
+ * ユーザー自身のMuseumを表すトップページ。
+ *
+ * 一般的なSNSのDashboardではなく、
+ * 美術館の入口・展示案内のような構成を目指す。
+ *
+ * このpage.tsx自身はServer Component。
+ *
+ * Interactionが必要な部分だけ
+ * Client Componentとして分離する。
+ */
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+    <main className="museum">
+      {/* ------------------------------------
+       * Museum Header
+       * ------------------------------------ */}
+      <header className="museum-header">
+        <div className="museum-header__identity">
+          <p className="museum-header__eyebrow">
+            わたしのミュージアム
           </p>
+
+          <h1 className="museum-header__title">
+            Haruki&apos;s Museum
+          </h1>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
+
+        <nav
+          className="museum-header__navigation"
+          aria-label="ミュージアムナビゲーション"
+        >
+          <a href="#exhibitions">
+            展示室
           </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
+
+          <a href="#about">
+            この場所について
           </a>
+        </nav>
+      </header>
+
+      {/* ------------------------------------
+       * Introduction
+       * ------------------------------------ */}
+      <section className="museum-introduction">
+        <p className="museum-introduction__number">
+          MUSEUM 001
+        </p>
+
+        <h2 className="museum-introduction__statement">
+          つくったもの。
+          <br />
+          好きだったもの。
+          <br />
+          忘れたくないもの。
+        </h2>
+
+        <p className="museum-introduction__description">
+          ここは、わたしという人間を
+          少しずつ残していく場所です。
+          大切にしたいものだけを、
+          展示しています。
+        </p>
+      </section>
+
+      {/* ------------------------------------
+       * Exhibitions
+       * ------------------------------------ */}
+      <section
+        id="exhibitions"
+        className="exhibitions"
+      >
+        <header className="section-header">
+          <p className="section-header__number">
+            01
+          </p>
+
+          <h2 className="section-header__title">
+            展示室
+          </h2>
+        </header>
+
+        <div className="exhibition-list">
+          <article className="exhibition">
+            <p className="exhibition__number">
+              001
+            </p>
+
+            <div>
+              <h3 className="exhibition__title">
+                つくったもの
+              </h3>
+
+              <p className="exhibition__description">
+                作品、実験、アイデア。
+                自分の手から生まれたものたち。
+              </p>
+            </div>
+          </article>
+
+          <article className="exhibition">
+            <p className="exhibition__number">
+              002
+            </p>
+
+            <div>
+              <h3 className="exhibition__title">
+                京都の夏
+              </h3>
+
+              <p className="exhibition__description">
+                忘れたくなかった、
+                あの夏の断片。
+              </p>
+            </div>
+          </article>
+
+          <article className="exhibition">
+            <p className="exhibition__number">
+              003
+            </p>
+
+            <div>
+              <h3 className="exhibition__title">
+                好きなもの
+              </h3>
+
+              <p className="exhibition__description">
+                もの、物語、場所。
+                ずっと心に残っているものたち。
+              </p>
+            </div>
+          </article>
         </div>
-      </main>
-    </div>
+      </section>
+
+      {/* ------------------------------------
+       * Exhibition Creation
+       * ------------------------------------ */}
+      <section className="create-exhibition">
+        <header className="section-header">
+          <p className="section-header__number">
+            02
+          </p>
+
+          <h2 className="section-header__title">
+            新しい展示室
+          </h2>
+        </header>
+
+        <div className="create-exhibition__content">
+          <p className="create-exhibition__description">
+            残しておきたいもののために、
+            新しい展示室をつくります。
+          </p>
+
+          <CreateExhibitionForm />
+        </div>
+      </section>
+    </main>
   );
 }
