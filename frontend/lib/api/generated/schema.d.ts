@@ -11,6 +11,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * APIの稼働状態を取得する
+         * @description Backend APIが正常に起動しているか確認します。
+         */
         get: operations["getHealth"];
         put?: never;
         post?: never;
@@ -29,7 +33,13 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** 展示室を作成する */
+        /**
+         * 展示室を作成する
+         * @description 指定したMuseumに新しいExhibitionを作成します。
+         *
+         *     Exhibitionは、
+         *     Museumの中に存在する「展示室」です。
+         */
         post: operations["createExhibition"];
         delete?: never;
         options?: never;
@@ -44,10 +54,58 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** 展示室を取得する */
+        /**
+         * 展示室を取得する
+         * @description Exhibition IDを指定して、
+         *     展示室を1件取得します。
+         */
         get: operations["getExhibition"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/museums/{museum_id}/exhibitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Museumの展示室一覧を取得する
+         * @description Museum IDを指定して、
+         *     そのMuseumに所属するExhibition一覧を取得します。
+         *
+         *     Exhibitionはdisplay_order順で返されます。
+         *
+         *     MUSEUMでは作成日時ではなく、
+         *     ユーザー自身が決めた展示順を重要視します。
+         */
+        get: operations["listMuseumExhibitions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/exhibitions/{exhibition_id}/exhibits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exhibition_id: string;
+            };
+            cookie?: never;
+        };
+        get: operations["listExhibits"];
+        put?: never;
+        post: operations["createExhibit"];
         delete?: never;
         options?: never;
         head?: never;
@@ -59,23 +117,97 @@ export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
         HealthResponse: {
+            /**
+             * @description APIの稼働状態
+             * @example ok
+             */
             status: string;
         };
         CreateExhibitionRequest: {
+            /**
+             * @description Exhibitionを作成するMuseumのID
+             * @example museum-001
+             */
             museum_id: string;
+            /**
+             * @description 展示室のタイトル
+             * @example つくったもの
+             */
             title: string;
+            /**
+             * @description 展示室の説明
+             * @example 自分でつくった作品やプロジェクトを展示しています。
+             */
             description?: string;
         };
         ExhibitionResponse: {
+            /**
+             * @description Exhibition ID
+             * @example 9db3f9df-8d51-47ad-85bc-f17d12139215
+             */
             id: string;
+            /**
+             * @description Exhibitionが所属するMuseum ID
+             * @example museum-001
+             */
             museum_id: string;
+            /**
+             * @description 展示室のタイトル
+             * @example つくったもの
+             */
             title: string;
+            /**
+             * @description 展示室の説明
+             * @example 自分でつくった作品やプロジェクトを展示しています。
+             */
             description: string;
+            /**
+             * Format: int32
+             * @description Museum内での表示順。
+             *
+             *     小さい値から順番に表示します。
+             *
+             *     MUSEUMではcreated_atではなく、
+             *     display_orderを表示順の正式な値として扱います。
+             * @example 0
+             */
+            display_order: number;
+            /**
+             * Format: date-time
+             * @description Exhibition作成日時
+             * @example 2026-09-10T12:00:00+09:00
+             */
+            created_at: string;
+        };
+        ExhibitionListResponse: {
+            /** @description Museumに所属する展示室一覧 */
+            exhibitions: components["schemas"]["ExhibitionResponse"][];
+        };
+        ErrorResponse: {
+            /**
+             * @description エラーメッセージ
+             * @example exhibition not found
+             */
+            error: string;
+        };
+        CreateExhibitRequest: {
+            image_url: string;
+            title?: string;
+            caption?: string;
+        };
+        ExhibitResponse: {
+            id: string;
+            exhibition_id: string;
+            title: string;
+            caption: string;
+            image_url: string;
+            /** Format: int32 */
+            display_order: number;
             /** Format: date-time */
             created_at: string;
         };
-        ErrorResponse: {
-            error: string;
+        ExhibitListResponse: {
+            exhibits: components["schemas"]["ExhibitResponse"][];
         };
     };
     responses: never;
@@ -153,6 +285,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description Exhibition ID */
                 id: string;
             };
             cookie?: never;
@@ -168,7 +301,7 @@ export interface operations {
                     "application/json": components["schemas"]["ExhibitionResponse"];
                 };
             };
-            /** @description 展示室が存在しない */
+            /** @description 指定された展示室が存在しない */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -178,6 +311,131 @@ export interface operations {
                 };
             };
             /** @description サーバー内部エラー */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listMuseumExhibitions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Museum ID */
+                museum_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description 展示室一覧取得成功 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExhibitionListResponse"];
+                };
+            };
+            /** @description サーバー内部エラー */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    listExhibits: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exhibition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Success */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExhibitListResponse"];
+                };
+            };
+            /** @description Exhibition not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    createExhibit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                exhibition_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateExhibitRequest"];
+            };
+        };
+        responses: {
+            /** @description Success */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExhibitResponse"];
+                };
+            };
+            /** @description Invalid input */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Exhibition not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Internal server error */
             500: {
                 headers: {
                     [name: string]: unknown;

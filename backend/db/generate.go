@@ -11,7 +11,7 @@ package db
 //
 // 生成先:
 //
-// internal/infrastructure/exhibition/sqlcgen/
+// internal/infrastructure/database/sqlcgen/
 //
 // sqlcgen配下は自動生成コードなので
 // 手動編集しない。

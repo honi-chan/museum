@@ -16,46 +16,111 @@ import (
 	"github.com/oapi-codegen/runtime"
 )
 
+// CreateExhibitRequest defines model for CreateExhibitRequest.
+type CreateExhibitRequest struct {
+	Caption  *string `json:"caption,omitempty"`
+	ImageUrl string  `json:"image_url"`
+	Title    *string `json:"title,omitempty"`
+}
+
 // CreateExhibitionRequest defines model for CreateExhibitionRequest.
 type CreateExhibitionRequest struct {
+	// Description 展示室の説明
 	Description *string `json:"description,omitempty"`
-	MuseumId    string  `json:"museum_id"`
-	Title       string  `json:"title"`
+
+	// MuseumId Exhibitionを作成するMuseumのID
+	MuseumId string `json:"museum_id"`
+
+	// Title 展示室のタイトル
+	Title string `json:"title"`
 }
 
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
+	// Error エラーメッセージ
 	Error string `json:"error"`
+}
+
+// ExhibitListResponse defines model for ExhibitListResponse.
+type ExhibitListResponse struct {
+	Exhibits []ExhibitResponse `json:"exhibits"`
+}
+
+// ExhibitResponse defines model for ExhibitResponse.
+type ExhibitResponse struct {
+	Caption      string    `json:"caption"`
+	CreatedAt    time.Time `json:"created_at"`
+	DisplayOrder int32     `json:"display_order"`
+	ExhibitionId string    `json:"exhibition_id"`
+	Id           string    `json:"id"`
+	ImageUrl     string    `json:"image_url"`
+	Title        string    `json:"title"`
+}
+
+// ExhibitionListResponse defines model for ExhibitionListResponse.
+type ExhibitionListResponse struct {
+	// Exhibitions Museumに所属する展示室一覧
+	Exhibitions []ExhibitionResponse `json:"exhibitions"`
 }
 
 // ExhibitionResponse defines model for ExhibitionResponse.
 type ExhibitionResponse struct {
-	CreatedAt   time.Time `json:"created_at"`
-	Description string    `json:"description"`
-	Id          string    `json:"id"`
-	MuseumId    string    `json:"museum_id"`
-	Title       string    `json:"title"`
+	// CreatedAt Exhibition作成日時
+	CreatedAt time.Time `json:"created_at"`
+
+	// Description 展示室の説明
+	Description string `json:"description"`
+
+	// DisplayOrder Museum内での表示順。
+	//
+	// 小さい値から順番に表示します。
+	//
+	// MUSEUMではcreated_atではなく、
+	// display_orderを表示順の正式な値として扱います。
+	DisplayOrder int32 `json:"display_order"`
+
+	// Id Exhibition ID
+	Id string `json:"id"`
+
+	// MuseumId Exhibitionが所属するMuseum ID
+	MuseumId string `json:"museum_id"`
+
+	// Title 展示室のタイトル
+	Title string `json:"title"`
 }
 
 // HealthResponse defines model for HealthResponse.
 type HealthResponse struct {
+	// Status APIの稼働状態
 	Status string `json:"status"`
 }
 
 // CreateExhibitionJSONRequestBody defines body for CreateExhibition for application/json ContentType.
 type CreateExhibitionJSONRequestBody = CreateExhibitionRequest
 
+// CreateExhibitJSONRequestBody defines body for CreateExhibit for application/json ContentType.
+type CreateExhibitJSONRequestBody = CreateExhibitRequest
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// CreateExhibition 展示室を作成する
 	// (POST /exhibitions)
 	CreateExhibition(w http.ResponseWriter, r *http.Request)
+
+	// (GET /exhibitions/{exhibition_id}/exhibits)
+	ListExhibits(w http.ResponseWriter, r *http.Request, exhibitionId string)
+
+	// (POST /exhibitions/{exhibition_id}/exhibits)
+	CreateExhibit(w http.ResponseWriter, r *http.Request, exhibitionId string)
 	// GetExhibition 展示室を取得する
 	// (GET /exhibitions/{id})
 	GetExhibition(w http.ResponseWriter, r *http.Request, id string)
-
+	// GetHealth APIの稼働状態を取得する
 	// (GET /health)
 	GetHealth(w http.ResponseWriter, r *http.Request)
+	// ListMuseumExhibitions Museumの展示室一覧を取得する
+	// (GET /museums/{museum_id}/exhibitions)
+	ListMuseumExhibitions(w http.ResponseWriter, r *http.Request, museumId string)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -72,6 +137,58 @@ func (siw *ServerInterfaceWrapper) CreateExhibition(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateExhibition(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListExhibits operation middleware
+func (siw *ServerInterfaceWrapper) ListExhibits(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "exhibition_id" -------------
+	var exhibitionId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "exhibition_id", r.PathValue("exhibition_id"), &exhibitionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exhibition_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListExhibits(w, r, exhibitionId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateExhibit operation middleware
+func (siw *ServerInterfaceWrapper) CreateExhibit(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "exhibition_id" -------------
+	var exhibitionId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "exhibition_id", r.PathValue("exhibition_id"), &exhibitionId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "exhibition_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateExhibit(w, r, exhibitionId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -112,6 +229,32 @@ func (siw *ServerInterfaceWrapper) GetHealth(w http.ResponseWriter, r *http.Requ
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMuseumExhibitions operation middleware
+func (siw *ServerInterfaceWrapper) ListMuseumExhibitions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "museum_id" -------------
+	var museumId string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "museum_id", r.PathValue("museum_id"), &museumId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "", ValueIsUnescaped: true})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "museum_id", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMuseumExhibitions(w, r, museumId)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -244,6 +387,9 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/health", wrapper.GetHealth)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/exhibitions", wrapper.CreateExhibition)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/exhibitions/{id}", wrapper.GetExhibition)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/museums/{museum_id}/exhibitions", wrapper.ListMuseumExhibitions)
+	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/exhibitions/{exhibition_id}/exhibits", wrapper.ListExhibits)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/exhibitions/{exhibition_id}/exhibits", wrapper.CreateExhibit)
 
 	return m
 }
@@ -287,6 +433,121 @@ func (response CreateExhibition400JSONResponse) VisitCreateExhibitionResponse(w 
 type CreateExhibition500JSONResponse ErrorResponse
 
 func (response CreateExhibition500JSONResponse) VisitCreateExhibitionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExhibitsRequestObject struct {
+	ExhibitionId string `json:"exhibition_id"`
+}
+
+type ListExhibitsResponseObject interface {
+	VisitListExhibitsResponse(w http.ResponseWriter) error
+}
+
+type ListExhibits200JSONResponse ExhibitListResponse
+
+func (response ListExhibits200JSONResponse) VisitListExhibitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExhibits404JSONResponse ErrorResponse
+
+func (response ListExhibits404JSONResponse) VisitListExhibitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListExhibits500JSONResponse ErrorResponse
+
+func (response ListExhibits500JSONResponse) VisitListExhibitsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExhibitRequestObject struct {
+	ExhibitionId string `json:"exhibition_id"`
+	Body         *CreateExhibitJSONRequestBody
+}
+
+type CreateExhibitResponseObject interface {
+	VisitCreateExhibitResponse(w http.ResponseWriter) error
+}
+
+type CreateExhibit201JSONResponse ExhibitResponse
+
+func (response CreateExhibit201JSONResponse) VisitCreateExhibitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExhibit400JSONResponse ErrorResponse
+
+func (response CreateExhibit400JSONResponse) VisitCreateExhibitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExhibit404JSONResponse ErrorResponse
+
+func (response CreateExhibit404JSONResponse) VisitCreateExhibitResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateExhibit500JSONResponse ErrorResponse
+
+func (response CreateExhibit500JSONResponse) VisitCreateExhibitResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -369,17 +630,62 @@ func (response GetHealth200JSONResponse) VisitGetHealthResponse(w http.ResponseW
 	return err
 }
 
+type ListMuseumExhibitionsRequestObject struct {
+	MuseumId string `json:"museum_id"`
+}
+
+type ListMuseumExhibitionsResponseObject interface {
+	VisitListMuseumExhibitionsResponse(w http.ResponseWriter) error
+}
+
+type ListMuseumExhibitions200JSONResponse ExhibitionListResponse
+
+func (response ListMuseumExhibitions200JSONResponse) VisitListMuseumExhibitionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListMuseumExhibitions500JSONResponse ErrorResponse
+
+func (response ListMuseumExhibitions500JSONResponse) VisitListMuseumExhibitionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(500)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// CreateExhibition 展示室を作成する
 	// (POST /exhibitions)
 	CreateExhibition(ctx context.Context, request CreateExhibitionRequestObject) (CreateExhibitionResponseObject, error)
+
+	// (GET /exhibitions/{exhibition_id}/exhibits)
+	ListExhibits(ctx context.Context, request ListExhibitsRequestObject) (ListExhibitsResponseObject, error)
+
+	// (POST /exhibitions/{exhibition_id}/exhibits)
+	CreateExhibit(ctx context.Context, request CreateExhibitRequestObject) (CreateExhibitResponseObject, error)
 	// GetExhibition 展示室を取得する
 	// (GET /exhibitions/{id})
 	GetExhibition(ctx context.Context, request GetExhibitionRequestObject) (GetExhibitionResponseObject, error)
-
+	// GetHealth APIの稼働状態を取得する
 	// (GET /health)
 	GetHealth(ctx context.Context, request GetHealthRequestObject) (GetHealthResponseObject, error)
+	// ListMuseumExhibitions Museumの展示室一覧を取得する
+	// (GET /museums/{museum_id}/exhibitions)
+	ListMuseumExhibitions(ctx context.Context, request ListMuseumExhibitionsRequestObject) (ListMuseumExhibitionsResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx context.Context, w http.ResponseWriter, r *http.Request, request any) (any, error)
@@ -452,6 +758,65 @@ func (sh *strictHandler) CreateExhibition(w http.ResponseWriter, r *http.Request
 	}
 }
 
+// ListExhibits operation middleware
+func (sh *strictHandler) ListExhibits(w http.ResponseWriter, r *http.Request, exhibitionId string) {
+	var request ListExhibitsRequestObject
+
+	request.ExhibitionId = exhibitionId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListExhibits(ctx, request.(ListExhibitsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListExhibits")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListExhibitsResponseObject); ok {
+		if err := validResponse.VisitListExhibitsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CreateExhibit operation middleware
+func (sh *strictHandler) CreateExhibit(w http.ResponseWriter, r *http.Request, exhibitionId string) {
+	var request CreateExhibitRequestObject
+
+	request.ExhibitionId = exhibitionId
+
+	var body CreateExhibitJSONRequestBody
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateExhibit(ctx, request.(CreateExhibitRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateExhibit")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CreateExhibitResponseObject); ok {
+		if err := validResponse.VisitCreateExhibitResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
 // GetExhibition operation middleware
 func (sh *strictHandler) GetExhibition(w http.ResponseWriter, r *http.Request, id string) {
 	var request GetExhibitionRequestObject
@@ -495,6 +860,32 @@ func (sh *strictHandler) GetHealth(w http.ResponseWriter, r *http.Request) {
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(GetHealthResponseObject); ok {
 		if err := validResponse.VisitGetHealthResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ListMuseumExhibitions operation middleware
+func (sh *strictHandler) ListMuseumExhibitions(w http.ResponseWriter, r *http.Request, museumId string) {
+	var request ListMuseumExhibitionsRequestObject
+
+	request.MuseumId = museumId
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ListMuseumExhibitions(ctx, request.(ListMuseumExhibitionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListMuseumExhibitions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ListMuseumExhibitionsResponseObject); ok {
+		if err := validResponse.VisitListMuseumExhibitionsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

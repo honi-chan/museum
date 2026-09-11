@@ -13,7 +13,7 @@ sql:
       go:
         package: "sqlcgen"
 
-        out: "internal/infrastructure/exhibition/sqlcgen"
+        out: "internal/infrastructure/database/sqlcgen"
 
         sql_package: "pgx/v5"
 
@@ -31,4 +31,6 @@ sql:
         # 意図しない他テーブルへの影響を防ぐ。
         overrides:
           - column: "exhibitions.created_at"
+            go_type: "time.Time"
+          - column: "exhibits.created_at"
             go_type: "time.Time"
