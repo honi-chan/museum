@@ -76,6 +76,15 @@ func (
 	return r.found, nil
 }
 
+func (
+	r *fakeExhibitionRepository,
+) ListByMuseumID(
+	ctx context.Context,
+	museumID string,
+) ([]domain.Exhibition, error) {
+	return nil, nil
+}
+
 // --------------------------------------------------
 // 正常系
 // --------------------------------------------------

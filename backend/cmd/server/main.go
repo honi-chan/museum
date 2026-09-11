@@ -10,6 +10,7 @@ import (
 	"museum/internal/handler"
 	"museum/internal/handler/middleware"
 	"museum/internal/infrastructure/database"
+	exhibitinfra "museum/internal/infrastructure/exhibit"
 	exhibitioninfra "museum/internal/infrastructure/exhibition"
 	"museum/internal/usecase"
 )
@@ -69,6 +70,11 @@ func main() {
 			exhibitionRepository,
 		)
 
+	listExhibitionsUseCase :=
+		usecase.NewListExhibitionsUseCase(
+			exhibitionRepository,
+		)
+
 	// ----------------------------------------
 	// Handler
 	// ----------------------------------------
@@ -77,12 +83,19 @@ func main() {
 		handler.NewExhibitionHandler(
 			createExhibitionUseCase,
 			getExhibitionUseCase,
+			listExhibitionsUseCase,
 		)
+
+	exhibitRepository := exhibitinfra.NewPostgresRepository(postgresPool)
+	apiHandler := handler.NewAPIHandler(server, handler.NewExhibitHandler(
+		usecase.NewCreateExhibitUseCase(exhibitRepository, idGenerator),
+		usecase.NewListExhibitsUseCase(exhibitRepository, exhibitionRepository),
+	))
 
 	// OpenAPI Strict Server。
 	strictHandler :=
 		generated.NewStrictHandler(
-			server,
+			apiHandler,
 			nil,
 		)
 

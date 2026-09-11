@@ -5,30 +5,17 @@ import (
 	"errors"
 
 	"museum/internal/domain"
-	"museum/internal/infrastructure/exhibition/sqlcgen"
+	"museum/internal/infrastructure/database/sqlcgen"
 	"museum/internal/repository"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// PostgresRepository は
-// ExhibitionRepositoryのPostgreSQL実装。
-//
-// SQLそのものはsqlcへ任せ、
-// ここでは
-//
-// DB Model
-// ↓
-// Domain
-//
-// の変換を担当する。
 type PostgresRepository struct {
 	queries *sqlcgen.Queries
 }
 
-// NewPostgresRepository は
-// PostgreSQL Repositoryを生成する。
 func NewPostgresRepository(
 	pool *pgxpool.Pool,
 ) *PostgresRepository {
@@ -37,7 +24,7 @@ func NewPostgresRepository(
 	}
 }
 
-// Save はExhibitionを保存する。
+// Save はExhibitionをPostgreSQLへ保存する。
 func (r *PostgresRepository) Save(
 	ctx context.Context,
 	exhibition domain.Exhibition,
@@ -54,7 +41,7 @@ func (r *PostgresRepository) Save(
 	)
 }
 
-// FindByID はExhibitionをIDで取得する。
+// FindByID はIDを指定してExhibitionを取得する。
 func (r *PostgresRepository) FindByID(
 	ctx context.Context,
 	id string,
@@ -66,10 +53,6 @@ func (r *PostgresRepository) FindByID(
 		)
 
 	if err != nil {
-		// PostgreSQL / pgx固有の
-		// ErrNoRowsをRepository共通エラーへ変換する。
-		//
-		// UseCaseにpgx依存を漏らさない。
 		if errors.Is(
 			err,
 			pgx.ErrNoRows,
@@ -81,20 +64,54 @@ func (r *PostgresRepository) FindByID(
 		return domain.Exhibition{}, err
 	}
 
-	// sqlc生成Modelを
-	// Domain Modelへ変換する。
 	return domain.Exhibition{
-		ID:          row.ID,
-		MuseumID:    row.MuseumID,
-		Title:       row.Title,
-		Description: row.Description,
-		CreatedAt:   row.CreatedAt,
+		ID:           row.ID,
+		MuseumID:     row.MuseumID,
+		Title:        row.Title,
+		Description:  row.Description,
+		DisplayOrder: row.DisplayOrder,
+		CreatedAt:    row.CreatedAt,
 	}, nil
 }
 
-// Compile-time check.
-//
-// PostgresRepositoryが
-// ExhibitionRepositoryを実装していることを
-// コンパイル時に保証する。
+// ListByMuseumID はMuseumに所属するExhibitionを
+// display_order順で取得する。
+func (r *PostgresRepository) ListByMuseumID(
+	ctx context.Context,
+	museumID string,
+) ([]domain.Exhibition, error) {
+	rows, err :=
+		r.queries.ListExhibitionsByMuseumID(
+			ctx,
+			museumID,
+		)
+
+	if err != nil {
+		return nil, err
+	}
+
+	exhibitions :=
+		make(
+			[]domain.Exhibition,
+			0,
+			len(rows),
+		)
+
+	for _, row := range rows {
+		exhibitions = append(
+			exhibitions,
+			domain.Exhibition{
+				ID:           row.ID,
+				MuseumID:     row.MuseumID,
+				Title:        row.Title,
+				Description:  row.Description,
+				DisplayOrder: row.DisplayOrder,
+				CreatedAt:    row.CreatedAt,
+			},
+		)
+	}
+
+	return exhibitions, nil
+}
+
 var _ repository.ExhibitionRepository = (*PostgresRepository)(nil)

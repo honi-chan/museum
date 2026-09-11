@@ -10,17 +10,15 @@ import (
 )
 
 // ExhibitionHandler は
-// OpenAPIから生成されたStrictServerInterfaceを実装する。
+// 展示室のHTTP Request / Response変換を担当する。
 //
 // HTTP Request / Responseの型は
 // OpenAPIから自動生成されるため、
 // Handlerでは手動定義しない。
 type ExhibitionHandler struct {
-	// Exhibition作成。
 	createUseCase *usecase.CreateExhibitionUseCase
-
-	// Exhibition取得。
-	getUseCase *usecase.GetExhibitionUseCase
+	getUseCase    *usecase.GetExhibitionUseCase
+	listUseCase   *usecase.ListExhibitionsUseCase
 }
 
 // NewExhibitionHandler は
@@ -29,10 +27,12 @@ type ExhibitionHandler struct {
 func NewExhibitionHandler(
 	createUseCase *usecase.CreateExhibitionUseCase,
 	getUseCase *usecase.GetExhibitionUseCase,
+	listUseCase *usecase.ListExhibitionsUseCase,
 ) *ExhibitionHandler {
 	return &ExhibitionHandler{
 		createUseCase: createUseCase,
 		getUseCase:    getUseCase,
+		listUseCase:   listUseCase,
 	}
 }
 
@@ -177,6 +177,54 @@ func (
 	}, nil
 }
 
+// ListMuseumExhibitions は
+// Museumに所属する展示室一覧を返す。
+func (
+	h *ExhibitionHandler,
+) ListMuseumExhibitions(
+	ctx context.Context,
+	request generated.ListMuseumExhibitionsRequestObject,
+) (
+	generated.ListMuseumExhibitionsResponseObject,
+	error,
+) {
+	exhibitions, err :=
+		h.listUseCase.Execute(
+			ctx,
+			request.MuseumId,
+		)
+
+	if err != nil {
+		return nil, err
+	}
+
+	response :=
+		make(
+			[]generated.ExhibitionResponse,
+			0,
+			len(exhibitions),
+		)
+
+	for _, exhibition := range exhibitions {
+
+		response = append(
+			response,
+			generated.ExhibitionResponse{
+				Id:           exhibition.ID,
+				MuseumId:     exhibition.MuseumID,
+				Title:        exhibition.Title,
+				Description:  exhibition.Description,
+				DisplayOrder: exhibition.DisplayOrder,
+				CreatedAt:    exhibition.CreatedAt,
+			},
+		)
+	}
+
+	return generated.ListMuseumExhibitions200JSONResponse{
+		Exhibitions: response,
+	}, nil
+}
+
 // --------------------------------------------------
 // Health
 // --------------------------------------------------
@@ -193,13 +241,3 @@ func (h *ExhibitionHandler) GetHealth(
 		Status: "ok",
 	}, nil
 }
-
-// Compile-time check.
-//
-// ExhibitionHandlerがOpenAPIで要求される
-// interfaceを満たしていなければ
-// コンパイル時にエラーになる。
-var _ generated.StrictServerInterface = (*ExhibitionHandler)(nil)
-
-// errors importを将来使う予定がない場合は削除してOK。
-var _ = errors.New

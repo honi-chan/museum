@@ -1,24 +1,34 @@
+import Link from "next/link";
+
 import CreateExhibitionForm from "@/components/exhibition/CreateExhibitionForm";
+import {
+  getMuseumExhibitions,
+} from "@/lib/api/exhibitions";
+
+/**
+ * 現時点ではAuthenticationがないため、
+ * 開発用Museum IDを固定している。
+ *
+ * Authentication実装後は
+ * Login UserのMuseum IDへ置き換える。
+ */
+const MUSEUM_ID =
+  "museum-001";
 
 /**
  * Museum Home
  *
- * ユーザー自身のMuseumを表すトップページ。
- *
- * 一般的なSNSのDashboardではなく、
- * 美術館の入口・展示案内のような構成を目指す。
- *
- * このpage.tsx自身はServer Component。
- *
- * Interactionが必要な部分だけ
- * Client Componentとして分離する。
+ * Server Componentとして、
+ * BackendからExhibition一覧を取得して表示する。
  */
-export default function Home() {
+export default async function Home() {
+  const exhibitions =
+    await getMuseumExhibitions(
+      MUSEUM_ID,
+    );
+
   return (
     <main className="museum">
-      {/* ------------------------------------
-       * Museum Header
-       * ------------------------------------ */}
       <header className="museum-header">
         <div className="museum-header__identity">
           <p className="museum-header__eyebrow">
@@ -37,16 +47,9 @@ export default function Home() {
           <a href="#exhibitions">
             展示室
           </a>
-
-          <a href="#about">
-            この場所について
-          </a>
         </nav>
       </header>
 
-      {/* ------------------------------------
-       * Introduction
-       * ------------------------------------ */}
       <section className="museum-introduction">
         <p className="museum-introduction__number">
           MUSEUM 001
@@ -68,9 +71,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* ------------------------------------
-       * Exhibitions
-       * ------------------------------------ */}
       <section
         id="exhibitions"
         className="exhibitions"
@@ -86,62 +86,44 @@ export default function Home() {
         </header>
 
         <div className="exhibition-list">
-          <article className="exhibition">
-            <p className="exhibition__number">
-              001
-            </p>
+          {exhibitions.map(
+            (
+              exhibition,
+              index,
+            ) => (
+              <Link
+                key={exhibition.id}
+                href={`/exhibitions/${exhibition.id}`}
+                className="exhibition"
+              >
+                <p className="exhibition__number">
+                  {String(
+                    index + 1,
+                  ).padStart(
+                    3,
+                    "0",
+                  )}
+                </p>
 
-            <div>
-              <h3 className="exhibition__title">
-                つくったもの
-              </h3>
+                <div>
+                  <h3 className="exhibition__title">
+                    {
+                      exhibition.title
+                    }
+                  </h3>
 
-              <p className="exhibition__description">
-                作品、実験、アイデア。
-                自分の手から生まれたものたち。
-              </p>
-            </div>
-          </article>
-
-          <article className="exhibition">
-            <p className="exhibition__number">
-              002
-            </p>
-
-            <div>
-              <h3 className="exhibition__title">
-                京都の夏
-              </h3>
-
-              <p className="exhibition__description">
-                忘れたくなかった、
-                あの夏の断片。
-              </p>
-            </div>
-          </article>
-
-          <article className="exhibition">
-            <p className="exhibition__number">
-              003
-            </p>
-
-            <div>
-              <h3 className="exhibition__title">
-                好きなもの
-              </h3>
-
-              <p className="exhibition__description">
-                もの、物語、場所。
-                ずっと心に残っているものたち。
-              </p>
-            </div>
-          </article>
+                  <p className="exhibition__description">
+                    {
+                      exhibition.description
+                    }
+                  </p>
+                </div>
+              </Link>
+            ),
+          )}
         </div>
       </section>
 
-      {/* ------------------------------------
-       * Exhibition Creation
-       * ------------------------------------ */}
       <section className="create-exhibition">
         <header className="section-header">
           <p className="section-header__number">

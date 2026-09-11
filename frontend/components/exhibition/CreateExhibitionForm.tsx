@@ -4,6 +4,7 @@ import {
   FormEvent,
   useState,
 } from "react";
+import { useRouter } from "next/navigation";
 
 import { apiClient } from "@/lib/api/client";
 
@@ -23,6 +24,9 @@ import { apiClient } from "@/lib/api/client";
  * page.tsx側へ持たせる。
  */
 export default function CreateExhibitionForm() {
+  const router =
+    useRouter();
+
   // ----------------------------------------
   // Form state
   // ----------------------------------------

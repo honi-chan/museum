@@ -3,11 +3,37 @@ openapi: 3.1.0
 info:
   title: MUSEUM API
   version: 0.1.0
+  description: |
+    MUSEUM Backend API。
+
+    MUSEUMは、
+    「自分という人間を編集して残す場所」
+    をコンセプトとしたSNSです。
+
+    このOpenAPI定義をHTTP APIのSource of Truthとして扱います。
+
+    Backendではoapi-codegen、
+    Frontendではopenapi-typescriptを使用して、
+    この定義から型を生成します。
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
 
 paths:
+  # ==================================================
+  # Health
+  # ==================================================
+
   /health:
     get:
       operationId: getHealth
+      summary: APIの稼働状態を取得する
+      description: |
+        Backend APIが正常に起動しているか確認します。
+
+      tags:
+        - Health
 
       responses:
         "200":
@@ -18,14 +44,22 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
 
-  # ----------------------------------------
-  # Exhibition作成
-  # ----------------------------------------
+  # ==================================================
+  # Exhibition
+  # ==================================================
+
   /exhibitions:
     post:
       operationId: createExhibition
-
       summary: 展示室を作成する
+      description: |
+        指定したMuseumに新しいExhibitionを作成します。
+
+        Exhibitionは、
+        Museumの中に存在する「展示室」です。
+
+      tags:
+        - Exhibitions
 
       requestBody:
         required: true
@@ -60,29 +94,23 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  # ----------------------------------------
-  # Exhibition取得
-  #
-  # /exhibitions の子要素ではなく、
-  # paths直下の兄弟として定義する。
-  # ----------------------------------------
   /exhibitions/{id}:
     get:
-      # このoperationIdから
-      #
-      # GetExhibitionRequestObject
-      # GetExhibitionResponseObject
-      # GetExhibition(...)
-      #
-      # が生成される。
       operationId: getExhibition
-
       summary: 展示室を取得する
+      description: |
+        Exhibition IDを指定して、
+        展示室を1件取得します。
+
+      tags:
+        - Exhibitions
 
       parameters:
         - name: id
           in: path
           required: true
+
+          description: Exhibition ID
 
           schema:
             type: string
@@ -97,7 +125,7 @@ paths:
                 $ref: "#/components/schemas/ExhibitionResponse"
 
         "404":
-          description: 展示室が存在しない
+          description: 指定された展示室が存在しない
 
           content:
             application/json:
@@ -112,9 +140,128 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  # ==================================================
+  # Museum / Exhibition
+  # ==================================================
+
+  /museums/{museum_id}/exhibitions:
+    get:
+      operationId: listMuseumExhibitions
+      summary: Museumの展示室一覧を取得する
+      description: |
+        Museum IDを指定して、
+        そのMuseumに所属するExhibition一覧を取得します。
+
+        Exhibitionはdisplay_order順で返されます。
+
+        MUSEUMでは作成日時ではなく、
+        ユーザー自身が決めた展示順を重要視します。
+
+      tags:
+        - Exhibitions
+
+      parameters:
+        - name: museum_id
+          in: path
+          required: true
+
+          description: Museum ID
+
+          schema:
+            type: string
+
+      responses:
+        "200":
+          description: 展示室一覧取得成功
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExhibitionListResponse"
+
+        "500":
+          description: サーバー内部エラー
+
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+# ==================================================
+# Components
+# ==================================================
+
+  /exhibitions/{exhibition_id}/exhibits:
+    parameters:
+      - name: exhibition_id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      operationId: listExhibits
+      tags: [Exhibits]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExhibitListResponse'
+        '404':
+          description: Exhibition not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      operationId: createExhibit
+      tags: [Exhibits]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExhibitRequest'
+      responses:
+        '201':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExhibitResponse'
+        '400':
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Exhibition not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 components:
   schemas:
+
+    # ==================================================
+    # Health
+    # ==================================================
+
     HealthResponse:
       type: object
 
@@ -124,6 +271,12 @@ components:
       properties:
         status:
           type: string
+          description: APIの稼働状態
+          example: ok
+
+    # ==================================================
+    # Exhibition Request
+    # ==================================================
 
     CreateExhibitionRequest:
       type: object
@@ -135,12 +288,23 @@ components:
       properties:
         museum_id:
           type: string
+          description: Exhibitionを作成するMuseumのID
+          example: museum-001
 
         title:
           type: string
+          minLength: 1
+          description: 展示室のタイトル
+          example: つくったもの
 
         description:
           type: string
+          description: 展示室の説明
+          example: 自分でつくった作品やプロジェクトを展示しています。
+
+    # ==================================================
+    # Exhibition Response
+    # ==================================================
 
     ExhibitionResponse:
       type: object
@@ -150,24 +314,70 @@ components:
         - museum_id
         - title
         - description
+        - display_order
         - created_at
 
       properties:
         id:
           type: string
+          description: Exhibition ID
+          example: 9db3f9df-8d51-47ad-85bc-f17d12139215
 
         museum_id:
           type: string
+          description: Exhibitionが所属するMuseum ID
+          example: museum-001
 
         title:
           type: string
+          description: 展示室のタイトル
+          example: つくったもの
 
         description:
           type: string
+          description: 展示室の説明
+          example: 自分でつくった作品やプロジェクトを展示しています。
+
+        display_order:
+          type: integer
+          format: int32
+          minimum: 0
+          description: |
+            Museum内での表示順。
+
+            小さい値から順番に表示します。
+
+            MUSEUMではcreated_atではなく、
+            display_orderを表示順の正式な値として扱います。
+          example: 0
 
         created_at:
           type: string
           format: date-time
+          description: Exhibition作成日時
+          example: "2026-09-10T12:00:00+09:00"
+
+    # ==================================================
+    # Exhibition List
+    # ==================================================
+
+    ExhibitionListResponse:
+      type: object
+
+      required:
+        - exhibitions
+
+      properties:
+        exhibitions:
+          type: array
+          description: Museumに所属する展示室一覧
+
+          items:
+            $ref: "#/components/schemas/ExhibitionResponse"
+
+    # ==================================================
+    # Common Error
+    # ==================================================
 
     ErrorResponse:
       type: object
@@ -178,3 +388,46 @@ components:
       properties:
         error:
           type: string
+          description: エラーメッセージ
+          example: exhibition not found
+
+    CreateExhibitRequest:
+      type: object
+      required: [image_url]
+      properties:
+        image_url:
+          type: string
+          minLength: 1
+        title:
+          type: string
+        caption:
+          type: string
+    ExhibitResponse:
+      type: object
+      required: [id, exhibition_id, title, caption, image_url, display_order, created_at]
+      properties:
+        id:
+          type: string
+        exhibition_id:
+          type: string
+        title:
+          type: string
+        caption:
+          type: string
+        image_url:
+          type: string
+        display_order:
+          type: integer
+          format: int32
+          minimum: 0
+        created_at:
+          type: string
+          format: date-time
+    ExhibitListResponse:
+      type: object
+      required: [exhibits]
+      properties:
+        exhibits:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExhibitResponse'

@@ -93,7 +93,7 @@ dev:
 #
 # 将来コード生成が増えても、
 # 開発者は make generate だけ実行すればよい。
-generate: backend-generate
+generate: backend-generate frontend-generate
 
 
 # Backendのコード生成。
@@ -253,3 +253,6 @@ backend-setup:
 		up
 	cd backend && go generate ./...
 	cd backend && go test ./...
+.PHONY: frontend-generate
+frontend-generate:
+	cd frontend && npm run generate:api
